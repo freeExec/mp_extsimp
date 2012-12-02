@@ -22,4 +22,17 @@ public class XYZ {
         result.y = r * Math.cos(lon * Bbox.DEGTORAD);
         return result;
     }
+
+    public void Sub(XYZ b) {
+        this.x -= b.x;
+        this.y -= b.y;
+        this.z -= b.z;
+    }
+
+    public static XYZ Sub(XYZ a, XYZ b) {
+        a.x -= b.x;
+        a.y -= b.y;
+        a.z -= b.z;
+        return a;
+    }
 }

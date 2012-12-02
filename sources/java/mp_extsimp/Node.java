@@ -24,6 +24,10 @@ public class Node {
     //public static final int MARK_NODE_OF_JUNCTION = -3;
     public static final int MARK_NODEID_DELETED = -2;
 
+    // Костыль, т.к. влом создавать псевдо клас для возврата двух значений, может оно потом и не пригодится
+    // Есть проверка только на = 3
+    public static int DistanceToSegment_last_case = 0;
+
     public double lat;      //Latitude
     public double lon;      //Longitude
     public int nodeID;     //NodeID from source .mp, -1 - not set, -2 - node killed
@@ -113,6 +117,75 @@ public class Node {
         first = XYZ.latLonToXYZ(node1.lat, node1.lon);
         second = XYZ.latLonToXYZ(node2.lat, node2.lon);
         return (first.x - second.x) * (first.x - second.x) + (first.y - second.y) * (first.y - second.y) + (first.z - second.z) * (first.z - second.z);
+    }
+
+    //Calc cosine of angle betweeen two edges
+    //(calc via vectors on reference ellipsoid, 180/-180 safe)
+    public static double cosAngleBetweenEdges(Node node1, Node node1a, Node node2, Node node2a) {
+        double _rtn = 0;
+        //double x1, y1, z1;
+        double x2, y2, z2;
+        //double x3, y3, z3;
+        double x4, y4, z4;
+        //int node1, node2;
+        double len1, len2;
+
+        XYZ first = new XYZ();
+        XYZ second = new XYZ();
+        XYZ third = new XYZ();
+        XYZ fourth = new XYZ();
+
+        //XYZ
+        //node1 = edge1.node1;
+        //.node2 = edge1.node2;
+        first = XYZ.latLonToXYZ(node1.lat, node1.lon);
+        second = XYZ.latLonToXYZ(node1a.lat, node1a.lon);
+        //node1 = Edges[edge2].node1;
+        //.node2 = Edges[edge2]..node2;
+        third = XYZ.latLonToXYZ(node2.lat, node2.lon);
+        fourth = XYZ.latLonToXYZ(node2a.lat, node2a.lon);
+
+        //vectors
+        //x2 = second.x - first.x;
+        //y2 = second.y - first.y;
+        //z2 = second.z - first.z;
+        second.Sub(first);
+        //x4 = x4 - x3;
+        //y4 = y4 - y3;
+        //z4 = z4 - z3;
+        fourth.Sub(third);
+
+        //vector lengths
+        //len1 = Sqr(x2 * x2 + y2 * y2 + z2 * z2);
+        len1 = Math.sqrt(second.x * second.x + second.y * second.y + second.z * second.z);
+        //len2 = Sqr(x4 * x4 + y4 * y4 + z4 * z4);
+        len2 = Math.sqrt(fourth.x * fourth.x + fourth.y * fourth.y + fourth.z * fourth.z);
+
+        if (len1 == 0  || len2 == 0) {
+            //one of vectors is void
+            _rtn = 0;
+        }
+        else {
+            //Cosine of angle is scalar multiply divided by lengths
+            _rtn = (second.x * fourth.x + second.y * fourth.y + second.z * fourth.z) / (len1 * len2);
+        }
+
+        return _rtn;
+    }
+
+    //Calc distance between not crossing edges (edge1 and edge2)
+    //(180/-180 safe)
+    public static double distanceBetweenSegments(Node node1, Node node1a, Node node2, Node node2a) {
+        double d1, d2;
+        //Just minimum of 4 distances (each ends to each other edge)
+        d1 = distanceToSegment(node1, node1a, node2);
+        d2 = distanceToSegment(node1, node1a, node2a);
+        if (d2 < d1) { d1 = d2; }
+        d2 = distanceToSegment(node2, node2a, node1);
+        if (d2 < d1) { d1 = d2; }
+        d2 = distanceToSegment(node1, node2a, node1a);
+        if (d2 < d1) { d1 = d2; }
+        return d1;
     }
 
 }
