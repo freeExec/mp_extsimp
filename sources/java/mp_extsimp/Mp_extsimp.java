@@ -1288,56 +1288,61 @@ public class Mp_extsimp {
     //MaxCosine2 - angle limit between edges
     //Params: 0 - first pass (chain empty, go by edge1 direction)
     //        1 - second pass (chain contains all 4 nodes of edges at the end, go by edge2 direction)
-    public static void goByTwoWays(int edge1, int edge2, double joinDistance, double combineDistance, double maxCosine2, int params) {
-        Long, i = null; j As Long, k As Long
+    //public static void goByTwoWays(int edge1, int edge2, double joinDistance, double combineDistance, double maxCosine2, int params) {
+    public static void goByTwoWays(Edge edge1, Edge edge2, double joinDistance, double combineDistance, double maxCosine2, int params) {
+        int i, j, k;
 
-        //'arrow-head edges
-        int edge_side1 = 0;
-        int edge_side2 = 0;
-        //'arrow-head nodes
-        Long, side1i = null; side1j As Long
-        Long, side2i = null; side2j As Long
-        //'flags of circle on each side
+        //arrow-head edges
+        //int edge_side1 = 0;
+        //int edge_side2 = 0;
+        Edge edge_side1;
+        Edge edge_side2;
+
+        //arrow-head nodes
+        int side1i, side1j;
+        int side2i, side2j;
+        //flags of circle on each side
         int side1circled = 0;
         int side2circled = 0;
 
-        int[4] side(4) = null;
-        double[4] dist(4) = null;
+        int[] side = new int[4];
+        double[] dist = new double[4];
         double dist_t = 0;
         double dx = 0;
         double dy = 0;
-        Double, px = null; py As Double
+        double px, py;
         double dd = 0;
         int roadtype = 0;
         double angl = 0;
         int calc_side = 0;
-        Double, angl_min = null; angl_min_edge As Long
+        double angl_min;
+        int angl_min_edge;
         int checkchain = 0;
         int passNumber = 0;
 
-        //'keep road type for comparing
-        roadtype = Edges[edge1].roadtype;
+        //keep road type for comparing
+        roadtype = edge1.roadtype;
 
         //'mark edges as participating in joining
-        Edges[edge1]..mark = 2;
-        Edges[edge2]..mark = 2;
+        edge1.mark = 2;
+        edge2.mark = 2;
 
         //'arrow-head of finding chains
         edge_side1 = edge1;
         edge_side2 = edge2;
 
         //i node is back, j is front of arrow-head - on both sides
-        side1i = Edges[edge1]..node1;
-        side1j = Edges[edge1]..node2;
-        side2i = Edges[edge2]..node2;
-        side2j = Edges[edge2]..node1;
+        side1i = edge1.node1;
+        side1j = edge1.node2;
+        side2i = edge2.node2;
+        side2j = edge2.node1;
 
         //'circles not yet found
         side1circled = 0;
         side2circled = 0;
 
         passNumber = 0;
-        if ((params && 1)) { passNumber = 1; }
+        if ((params & 1) == 0) { passNumber = 1; }
 
         if (passNumber == 1) {
             //second pass
@@ -1348,11 +1353,11 @@ public class Mp_extsimp {
         //middle line projection vector
         //TODO: fix (not safe to 180/-180 edge)
         //'sum of two edges
-        dx = (Nodes[side1j]..lat - Nodes[side1i]..lat) + (Nodes[side2j]..lat - Nodes[side2i]..lat);
-        dy = (Nodes[side1j]..lon - Nodes[side1i]..lon) + (Nodes[side2j]..lon - Nodes[side2i]..lon);
+        dx = (Nodes.get(side1j).lat - Nodes.get(side1i).lat) + (Nodes.get(side2j).lat - Nodes.get(side2i).lat);
+        dy = (Nodes.get(side1j).lon - Nodes.get(side1i).lon) + (Nodes.get(side2j).lon - Nodes.get(side2i).lon);
         //'start point - average of two starts
-        px = (Nodes[side1i]..lat + Nodes[side2i]..lat) * 0.5;
-        py = (Nodes[side1i]..lon + Nodes[side2i]..lon) * 0.5;
+        px = (Nodes.get(side1i).lat + Nodes.get(side2i).lat) * 0.5;
+        py = (Nodes.get(side1i).lon + Nodes.get(side2i).lon) * 0.5;
 
         side[0] = side1i;
         side[1] = side1j;
@@ -1362,15 +1367,15 @@ public class Mp_extsimp {
         //calc relative positions of projections of all 4 noes to edge1
         dd = 1 / (dx * dx + dy * dy);
         for (i = 0; i <= 3; i++) {
-            dist[i] = (Nodes[side[i]]..lat - px) * dx + (Nodes[side[i]]..lon - py) * dy;
+            dist[i] = (Nodes.get(side[i]).lat - px) * dx + (Nodes.get(side[i]).lon - py) * dy;
         }
 
         //Sort dist() and side() by dist() by bubble sort
         for (i = 0; i <= 3; i++) {
             for (j = i + 1; j <= 3; j++) {
                 if (dist[j] < dist[i]) {
-                    dist_t = dist[j]: dist[j] == dist[i]: dist[i] == dist_t;
-                    k = side[j]: side[j] == side[i]: side[i] == k;
+                    dist_t = dist[j]; dist[j] = dist[i]; dist[i] = dist_t;
+                    k = side[j]; side[j] = side[i]; side[i] = k;
                 }
             }
         }
@@ -1378,20 +1383,28 @@ public class Mp_extsimp {
         //Add nodes to chain in sorted order
         for (i = 0; i <= 3; i++) {
             addChain(side[i]);
-            Nodes[NodesNum].Edges = 0;
-            Nodes[NodesNum]..nodeID = -1;
-            Nodes[NodesNum]..mark = -1;
+            /*
+            Nodes.get(Nodes.size().Edges = 0;
+            Nodes.get(Nodes.size().nodeID = -1;
+            Nodes.get(Nodes.size().mark = -1;
             //'info that old node will collapse to this new one
-            Nodes[side[i]]..mark = NodesNum;
+            Nodes.get([side[i]).mark = NodesNum;
             //'projected coordinates
-            Nodes[NodesNum]..lat = px + dist[i] * dx * dd;
-            Nodes[NodesNum]..lon = py + dist[i] * dy * dd;
-            addNode();
+            Nodes.get(Nodes.size().lat = px + dist[i] * dx * dd;
+            Nodes.get(Nodes.size().lon = py + dist[i] * dy * dd;
+            addNode(); */
+            Node addedNode = new Node(-1);
+            addedNode.Edges = 0;
+            addedNode.mark = -1;
+            addedNode.lat = px + dist[i] * dx * dd;
+            addedNode.lon = py + dist[i] * dy * dd;
+            Nodes.add(addedNode);
+            Nodes.get(side[i]).mark = Nodes.size();
         }
 
 //*TODO:** label found: lKeepGoing:;
 
-        angl_min = MaxCosine2: angl_min_edge == -1;
+        angl_min = maxCosine2; angl_min_edge = -1;
 
         if (Chain[ChainNum - 1] == side1j) {
             //side1 is leading, side2 should be prolonged
@@ -1404,23 +1417,31 @@ public class Mp_extsimp {
 
         if (calc_side == 2) {
             //search edge from side2j which is most opposite to edge_side1
-            for (i = 0; i <= Nodes[side2j].Edges - 1; i++) {
-                j = Nodes[side2j]..edge(i);
-                if (j == edge_side2  || Edges[j]..node1 < 0 || Edges[j]..oneway == 0  || Edges[j].roadtype != roadtype  || Edges[j]..node2 != side2j) { 
+            for (i = 0; i <= Nodes.get(side2j).Edges - 1; i++) {
+                j = Nodes.get(side2j).edge[i];
+                // TODO: возможно что-то не так, было j == edge_side2 (индексы)
+                if (Edges.get(j) == edge_side2  || Edges.get(j).node1 < 0 || Edges.get(j).oneway == 0
+                        || Edges.get(j).roadtype != roadtype  || Edges.get(j).node2 != side2j) {
                     //*TODO:** goto found: GoTo lSkipEdgeSide2;
                 }
                 //skip same edge_side2, deleted, 2-ways, other road types and directed from this node outside
-                dist_t = distanceBetweenSegments(j, edge_side1);
-                //'skip too far edges
-                if (dist_t > joinDistance) { //*TODO:** goto found: GoTo lSkipEdgeSide2; }
-                angl = cosAngleBetweenEdges(j, edge_side1);
+                //dist_t = distanceBetweenSegments(j, edge_side1);
+                dist_t = Node.distanceBetweenSegments(Nodes.get(Edges.get(j).node1), Nodes.get(Edges.get(j).node2),
+                        Nodes.get(edge_side1.node1), Nodes.get(edge_side1.node2));
+                //skip too far edges
+                if (dist_t > joinDistance) { 
+                    //*TODO:** goto found: GoTo lSkipEdgeSide2;
+                }
+                //angl = cosAngleBetweenEdges(j, edge_side1);
+                angl = Node.cosAngleBetweenEdges(Nodes.get(Edges.get(j).node1), Nodes.get(Edges.get(j).node2),
+                        Nodes.get(edge_side1.node1), Nodes.get(edge_side1.node2));
                 //'remember edge with min angle
-                if (angl < angl_min) { angl_min = angl: angl_min_edge == j; }
+                if (angl < angl_min) { angl_min = angl; angl_min_edge = j; }
                 //*TODO:** label found: lSkipEdgeSide2:;
             }
 
             //'mark edge as participating in joining
-            Edges[edge_side2]..mark = 2;
+            edge_side2.mark = 2;
             //'add edge to chain (depending on pass number)
             addTW(edge_side2, passNumber);
 
