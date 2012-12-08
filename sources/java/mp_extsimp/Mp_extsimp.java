@@ -37,9 +37,10 @@ public class Mp_extsimp {
     private static int EdgesNum = 0;
     
     //Array for building chain of indexes
-    private static int[] Chain;
+    private static ArrayList<Integer> Chain;
+    /* private static int[] Chain;
     private static int ChainAlloc = 0;
-    private static int ChainNum = 0;
+    private static int ChainNum = 0;*/
     
     //Aim edges
     private static aimedge[] AimEdges;
@@ -140,9 +141,10 @@ public class Mp_extsimp {
         Edges = new ArrayList<Edge>();
         //EdgesNum = 0;
 
-        ChainAlloc = 1000;
+        Chain = new ArrayList<Integer>();
+        /* ChainAlloc = 1000;
         Chain = new int[ChainAlloc];
-        ChainNum = 0;
+        ChainNum = 0;*/
 
         AimEdgesAlloc = 50;
         AimEdges = new aimedge[AimEdgesAlloc];
@@ -1386,7 +1388,8 @@ public class Mp_extsimp {
 
         //Add nodes to chain in sorted order
         for (i = 0; i <= 3; i++) {
-            addChain(side[i]);
+            //addChain(side[i]);
+            Chain.add(side[i]);
             /*
             Nodes.get(Nodes.size().Edges = 0;
             Nodes.get(Nodes.size().nodeID = -1;
@@ -1410,7 +1413,7 @@ public class Mp_extsimp {
 
         angl_min = maxCosine2; angl_min_edge = -1;
 
-        if (Chain[ChainNum - 1] == side1j) {
+        if (Chain.get(Chain.size()) == side1j) {
             //side1 is leading, side2 should be prolonged
             calc_side = 2;
         }
@@ -1452,28 +1455,28 @@ public class Mp_extsimp {
             if (angl_min_edge == -1) {
                 //no edge found - end of chain
                 //'mark last edge of side1
-                Edges[edge_side1]..mark = 2;
+                edge_side1.mark = 2;
                 //'and add it to chain
                 addTW(edge_side1, 1 - passNumber);
                 //*TODO:** goto found: GoTo lChainEnds;
             }
 
-            edge_side2 = angl_min_edge;
-            //'update i and j nodes of side
+            edge_side2 = Edges.get(angl_min_edge);
+            //update i and j nodes of side
             side2i = side2j;
-            side2j = Edges[edge_side2]..node1;
+            side2j = edge_side2.node1;
 
-            if (Edges[edge_side2]..mark == 2) {
+            if (edge_side2.mark == 2) {
                 //found marked edge, this means that we found cycle
                 side2circled = 1;
             }
 
             if (side2j == side1j) {
                 //found joining of two directions, should end chain
-                //'mark both last edges as participating in joining
-                Edges[edge_side2]..mark = 2;
-                Edges[edge_side1]..mark = 2;
-                //'add them to chains
+                //mark both last edges as participating in joining
+                edge_side2.mark = 2;
+                edge_side1.mark = 2;
+                //add them to chains
                 addTW(edge_side2, passNumber);
                 addTW(edge_side1, 1 - passNumber);
                 //*TODO:** goto found: GoTo lChainEnds;
@@ -1482,50 +1485,55 @@ public class Mp_extsimp {
         }
         else {
             //search edge from side1j which is most opposite to edge_side2
-            for (i = 0; i <= Nodes[side1j].Edges - 1; i++) {
-                j = Nodes[side1j]..edge(i);
-                if (j == edge_side1  || Edges[j]..oneway == 0  || Edges[j].roadtype != roadtype  || Edges[j]..node1 != side1j) { //*TODO:** goto found: GoTo lSkipEdgeSide1; }
+            for (i = 0; i <= Nodes.get(side1j).Edges - 1; i++) {
+                j = Nodes.get(side1j).edge[i];
+                Edge edgeJ = Edges.get(j);
+                if (edgeJ == edge_side1  || edgeJ.oneway == 0  || edgeJ.roadtype != roadtype  || edgeJ.node1 != side1j) {
+                    //*TODO:** goto found: GoTo lSkipEdgeSide1;
+                }
                 //skip same edge_side1, 2-ways, other road types and directed from this node outside
-                dist_t = distanceBetweenSegments(j, edge_side2);
+                dist_t = Node.distanceBetweenSegments(Nodes.get(edgeJ.node1), Nodes.get(edgeJ.node2),
+                        Nodes.get(edge_side2.node1), Nodes.get(edge_side2.node2));
                 //'skip too far edges
                 if (dist_t > joinDistance) { 
                     //*TODO:** goto found: GoTo lSkipEdgeSide1;
                 }
-                angl = cosAngleBetweenEdges(j, edge_side2);
+                angl = Node.cosAngleBetweenEdges(Nodes.get(edgeJ.node1), Nodes.get(edgeJ.node2),
+                        Nodes.get(edge_side2.node1), Nodes.get(edge_side2.node2));
                 //'remember edge with min angle
-                if (angl < angl_min) { angl_min = angl: angl_min_edge == j; }
+                if (angl < angl_min) { angl_min = angl; angl_min_edge = j; }
                 //*TODO:** label found: lSkipEdgeSide1:;
             }
 
-            //'mark edge as participating in joining
-            Edges[edge_side1]..mark = 2;
-            //'add edge to chain (depending on pass number)
+            //mark edge as participating in joining
+            edge_side1.mark = 2;
+            //add edge to chain (depending on pass number)
             addTW(edge_side1, 1 - passNumber);
 
             if (angl_min_edge == -1) {
                 //no edge found - end of chain
                 //'mark last edge of side2
-                Edges[edge_side2]..mark = 2;
+                edge_side2.mark = 2;
                 //'and add it to chain
                 addTW(edge_side2, passNumber);
                 //*TODO:** goto found: GoTo lChainEnds;
             }
 
-            edge_side1 = angl_min_edge;
-            //'update i and j nodes of side
+            edge_side1 = Edges.get(angl_min_edge);
+            //update i and j nodes of side
             side1i = side1j;
-            side1j = Edges[edge_side1]..node2;
+            side1j = edge_side1.node2;
 
-            if (Edges[edge_side1]..mark == 2) {
+            if (edge_side1.mark == 2) {
                 //found marked edge, means, that we found cycle
                 side1circled = 1;
             }
 
             if (side2j == side1j) {
                 //found marked edge, this means that we found cycle
-                //'mark both last edges as participating in joining
-                Edges[edge_side2]..mark = 2;
-                Edges[edge_side1]..mark = 2;
+                //mark both last edges as participating in joining
+                edge_side2.mark = 2;
+                edge_side1.mark = 2;
                 //'add them to chains
                 addTW(edge_side2, passNumber);
                 addTW(edge_side1, 1 - passNumber);
@@ -1535,14 +1543,14 @@ public class Mp_extsimp {
 
         //middle line projection vector
         //TODO: fix (not safe to 180/-180 edge)
-        dx = Nodes[side1j]..lat - Nodes[side1i]..lat + Nodes[side2j]..lat - Nodes[side2i]..lat;
-        dy = Nodes[side1j]..lon - Nodes[side1i]..lon + Nodes[side2j]..lon - Nodes[side2i]..lon;
-        px = (Nodes[side1i]..lat + Nodes[side2i]..lat) * 0.5;
-        py = (Nodes[side1i]..lon + Nodes[side2i]..lon) * 0.5;
+        dx = Nodes.get(side1j).lat - Nodes.get(side1i).lat + Nodes.get(side2j).lat - Nodes.get(side2i).lat;
+        dy = Nodes.get(side1j).lon - Nodes.get(side1i).lon + Nodes.get(side2j).lon - Nodes.get(side2i).lon;
+        px = (Nodes.get(side1i).lat + Nodes.get(side2i).lat) * 0.5;
+        py = (Nodes.get(side1i).lon + Nodes.get(side2i).lon) * 0.5;
         dd = 1 / (dx * dx + dy * dy);
 
         //'remember current chain len
-        checkchain = ChainNum;
+        checkchain = Chain.size();
 
         if (calc_side == 2) {
             //project j node from side2 to middle line
@@ -1645,16 +1653,16 @@ public class Mp_extsimp {
 
     //Add edge into one of TW arrays
     //side: 0 - into TWforw, 1 - into TWback
-    public static void addTW(int edge1, int side) {
+    public static void addTW(Edge edge1, int side) {
         if (side == 1) {
-            TWback.add(edge1);
+            TWback.add(Edges.indexOf(edge1));
             /*TWback[TWbackNum] = edge1;
             TWbackNum = TWbackNum + 1;
             if (TWbackNum >= TWalloc) {
                 //*TODO:** goto found: GoTo lRealloc;
             }*/
         } else {
-            TWforw.add(edge1);
+            TWforw.add(Edges.indexOf(edge1));
             /*TWforw[TWforwNum] = edge1;
             TWforwNum = TWforwNum + 1;
             if (TWforwNum >= TWalloc) {
