@@ -52,11 +52,13 @@ public class Mp_extsimp {
     private static int LabelStatsAlloc = 0;
 
     //Indexes of forward and backward ways during two ways joining
-    private static int[] TWforw;
+    private static ArrayList<Integer> TWforw;
+    private static ArrayList<Integer> TWback;
+    /*private static int[] TWforw;
     private static int[] TWback;
     private static int TWalloc = 0;
     private static int TWforwNum = 0;
-    private static int TWbackNum = 0;
+    private static int TWbackNum = 0;*/
 
     //max found NodeID
     public static int NodeIDMax = 0;
@@ -150,11 +152,13 @@ public class Mp_extsimp {
         LabelStats = new LabelStat[LabelStatsAlloc];
         LabelStatsNum = 0;
 
-        TWalloc = 100;
+        /*TWalloc = 100;
         TWforw = new int[TWalloc];
         TWback = new int[TWalloc];
         TWbackNum = 0;
-        TWforwNum = 0;     
+        TWforwNum = 0;*/
+        TWforw = new ArrayList<Integer>();
+        TWback = new ArrayList<Integer>();
     }
 
     //Load .mp file
@@ -1636,6 +1640,30 @@ public class Mp_extsimp {
             t = arr[i];
             arr[i] = arr[num - 1 - i];
             arr[num - 1 - i] = t;
+        }
+    }
+
+    //Add edge into one of TW arrays
+    //side: 0 - into TWforw, 1 - into TWback
+    public static void addTW(int edge1, int side) {
+        if (side == 1) {
+            TWback.add(edge1);
+            /*TWback[TWbackNum] = edge1;
+            TWbackNum = TWbackNum + 1;
+            if (TWbackNum >= TWalloc) {
+                //*TODO:** goto found: GoTo lRealloc;
+            }*/
+        } else {
+            TWforw.add(edge1);
+            /*TWforw[TWforwNum] = edge1;
+            TWforwNum = TWforwNum + 1;
+            if (TWforwNum >= TWalloc) {
+//*TODO:** label found: lRealloc:;
+                //realloc if needed
+                TWalloc = TWalloc * 2;
+                G.redimPreserve(TWforw, TWalloc);
+                G.redimPreserve(TWback, TWalloc);
+            }*/
         }
     }
 
