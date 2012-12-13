@@ -621,43 +621,45 @@ public class Mp_extsimp {
         int NodesNum = Nodes.size();
         //mark all nodes as not checked
         for (i = 0; i <= NodesNum - 1; i++) {
-            //'not moved
+            //not moved
             Nodes.get(i).mark = -1;
         }
         int EdgesNum = Edges.size();
-        for (i = 0; i <= EdgesNum - 1; i++) {
-            Edges.get(i).mark = 1;
+        for (i = 0; i < EdgesNum; i++) {
+            Edge edgeI = Edges.get(i);
+            edgeI.mark = 1;
             
-            //'skip deleted and 2-ways edges
-            if (Edges.get(i).node1 == -1 || Edges.get(i).oneway == 0) {
+            //skip deleted and 2-ways edges
+            if (edgeI.node1 == null || edgeI.oneway == 0) {
                 //*TODO:** goto found: GoTo lFinMarkEdge;
                 continue;
             }
-            //'skip links
-            if ((Edges.get(i).roadtype & Highway.HIGHWAY_MASK_LINK) > 0) {
+            //skip links
+            if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) > 0) {
                 //*TODO:** goto found: GoTo lFinMarkEdge;
                 continue;
             }
-            //'skip edges between complex connections
-            if (Nodes.get(Edges.get(i).node1).Edges != 2  && Nodes.get(Edges.get(i).node2).Edges != 2) { 
+            //skip edges between complex connections
+            if (edgeI.node1.edgeL.size() != 2  && edgeI.node2.edgeL.size() != 2) { 
                 //*TODO:** goto found: GoTo lFinMarkEdge;
                 continue;
             }
-            Edges.get(i).mark = 0;
+            edgeI.mark = 0;
 //*TODO:** label found: lFinMarkEdge:;
         }
 
         //rebuild cluster-index from 0
         buildNodeClusterIndex(0);
 
-        for (i = 0; i <= EdgesNum - 1; i++) {
-            //'skip marked edge or deleted
-            if (Edges.get(i).mark > 0 || Edges.get(i).node1 < 0) {
-            //*TODO:** goto found: GoTo lSkipEdge;
+        for (i = 0; i < EdgesNum; i++) {
+            Edge edgeI = Edges.get(i);
+            //skip marked edge or deleted
+            if (edgeI.mark > 0 || edgeI.node1 == null) {
+        //*TODO:** goto found: GoTo lSkipEdge;
             }
             //'get bbox
             //bbox_edge = getEdgeBbox(i);
-            bbox_edge = Edge.getEdgeBbox(Nodes.get(Edges.get(i).node1), Nodes.get(Edges.get(i).node2));
+            bbox_edge = Edge.getEdgeBbox(edgeI.node1, edgeI.node2);
             //'expand it
             Bbox.expandBbox(bbox_edge, joinDistance);
             min_dist = joinDistance;
@@ -678,7 +680,7 @@ public class Mp_extsimp {
                 }
 
                 //'skip nodes of same edge, deleted and complex nodes
-                if (k == Edges.get(i).node1  || k == Edges.get(i).node2  || Nodes.get(k).nodeID == Mark.MARK_NODEID_DELETED  || Nodes.get(k).Edges != 2) {
+                if (k == edgeI.node1  || k == edgeI.node2  || Nodes.get(k).nodeID == Mark.MARK_NODEID_DELETED  || Nodes.get(k).Edges != 2) {
                     //*TODO:** goto found: GoTo lSkipNode2;
                     continue;
                 }
@@ -1098,13 +1100,13 @@ public class Mp_extsimp {
 
     //Find node in bbox by using cluster index
     //Flags: 1 - next (0 - first)
-    public static int getNodeInBboxByCluster(Bbox box1, int flags) {
-        int _rtn = 0;
-        int i, j, k;
+    // TODO: перелопачена здорого, могут быть БАГИ
+    public static Node getNodeInBboxByCluster(Bbox box1, boolean flags) {
+        int j, k;
         int x, y;
         int x1, x2, y1, y2;
-
-        if ((flags & 1) == 0) {
+        
+        if (!flags) {
             //first node needed
 
             //get coordinates of all needed clusters
@@ -1113,17 +1115,14 @@ public class Mp_extsimp {
             y1 = (int)((box1.lon_min - ClustersLon0) / CLUSTER_SIZE);
             y2 = (int)((box1.lon_max - ClustersLon0) / CLUSTER_SIZE);
 
-            //'store bbox for next searches
+            //store bbox for next searches
             ClustersFindLastBbox = box1;
             x = x1;
             y = y1;
-            //*TODO:** goto found: GoTo lCheckFirst;
         } else {
-
             if (ClustersFindLastNode == -1) {
                 //Last time nothing found - nothing to do further
-                _rtn = -1;
-                //*TODO:** goto found: GoTo lExit;
+                return null;
             }
 
             //get coordinates of all needed clusters
@@ -1136,8 +1135,37 @@ public class Mp_extsimp {
             x = ClustersFindLastCluster % ClustersLatNum;   // Mod
             y = (int)((ClustersFindLastCluster - x) / ClustersLatNum);  // было целое деление или как-то так "\"
 
-//*TODO:** label found: lNextNode:;
-            //'get node from chain
+        }
+        
+        
+        //proceed to next cluster
+        while(true) {
+            //next line of cluster
+            if (x > x2) {
+                y ++;
+                x = x1;
+            }
+            if (y > y2) {
+                //last cluster - no nodes
+                //nothing found
+                //nothing will be found next time
+                ClustersFindLastNode = -1;
+                ClustersFindLastCluster = -1;
+                break;
+            }
+            
+            //get first node of cluster
+
+            j = x + y * ClustersLatNum;
+            k = ClustersFirst[j];
+            //no first node - skip cluster
+            if (k == -1) { 
+                //*TODO:** goto found: GoTo lNextCluster;
+                continue;
+            }
+            ClustersFindLastCluster = j;
+            
+            //get node from chain
             //k = ClustersChain[ClustersFindLastNode];
             // TODO: не уверен что так можно
             while ((k = ClustersChain[ClustersFindLastNode]) != -1) {
@@ -1162,49 +1190,16 @@ public class Mp_extsimp {
                     continue;
                 }
                 //OK, found
-                //_rtn = k;
                 //*TODO:** goto found: GoTo lExit;
-                return k;
+                return Nodes.get(k);
             }
-
             //end of chain -> last node in cluster
-
-//*TODO:** label found: lNextCluster:;
-            //proceed to next cluster
-
             x ++;
-            //next line of cluster
-            if (x > x2) {
-                y ++;
-                x = x1;
-            }
-            if (y > y2) {
-                //last cluster - no nodes
-                //'nothing found
-                _rtn = -1;
-                //'nothing will be found next time
-                ClustersFindLastNode = -1;
-                ClustersFindLastCluster = -1;
-                //*TODO:** goto found: GoTo lExit;
-                return _rtn;
-            }
         }
-//*TODO:** label found: lCheckFirst:;
-        //get first node of cluster
-
-        j = x + y * ClustersLatNum;
-        k = ClustersFirst[j];
-        //no first node - skip cluster
-        if (k == -1) { 
-            //*TODO:** goto found: GoTo lNextCluster;
-        }
-        ClustersFindLastCluster = j;
-        //'there is first node - check it
-        //*TODO:** goto found: GoTo lCheckNode;
-
-//*TODO:** label found: lExit:;
-
-        return _rtn;
+        
+        
+        
+        return null;
     }
 
     //Find edges of two way road
