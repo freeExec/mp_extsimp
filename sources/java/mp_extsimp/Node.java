@@ -5,6 +5,7 @@
 package mp_extsimp;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  *
@@ -64,7 +65,7 @@ public class Node {
     public void delNode() {
         while (this.edgeL.size() > 0) {
             //Mp_extsimp.delEdge(this.edgeL[0]);
-            this.edgeL.get(0).delEdge(this);
+            this.edgeL.get(0).delEdge();
         }
         //this.Edges = 0;
         //mark node as deleted
@@ -200,4 +201,68 @@ public class Node {
     public static double distance(Node node1, Node node2) {
         return Math.sqrt(distanceSquare(node1, node2));
     }    
+
+    //Merge node2 to node1 with relink of all edges
+    public static void mergeNodes(Node node1, Node node2) {
+        mergeNodes(node1, node2, 0);
+    }
+    
+    //flag: 1 - ignore node2 coords (0 - move node1 to average coordinates)
+    public static void mergeNodes(Node node1, Node node2, int flag) {
+        int k, i;
+        Edge edgeJ;
+
+        //relink edges from node2 to node1
+        //p = Nodes.get(node1).edgeL.size();
+        //Node node1N = Nodes.get(node1);
+        //Node node2N = Nodes.get(node2);
+        k = node2.edgeL.size();
+        
+        for (i = 0; i <= k - 1; i++) {
+            //j = node2N.edgeL[i];
+            edgeJ = node2.edgeL.get(i);
+
+            if (edgeJ.node1 == node2) {
+                //edge goes from node2 to X
+                edgeJ.node1 = node1;
+            }
+            if (edgeJ.node2 == node2) {
+                //edge goes from X to node2
+                edgeJ.node2 = node1;
+            }
+            //Nodes.get(node1).edgeL[p] = j;
+            //node1N.edgeL.set(p, edgeJ);
+            node1.edgeL.add(edgeJ);
+            //p = p + 1;
+        }
+        //Nodes.get(node1).Edges = p;
+        //Nodes.get(node2).Edges = 0;
+        node2.edgeL.clear();
+
+        //kill all void edges right now
+        /*
+        i = 0;
+        p = node1.edgeL.size();
+        while (i < p) {     //Nodes[node1].Edges) {
+            //j = Nodes.get(node1).edgeL[i];
+            edgeJ = node1.edgeL.get(i);
+            if (edgeJ.node1 == edgeJ.node2) { edgeJ.delEdge(); }
+            i = i + 1;
+        }
+        */
+        for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
+            if (iEdge.next().node1 == iEdge.next().node2) { iEdge.next().delEdge(); }
+        }
+
+        if (flag == 1) {
+            //Calc average coordinates
+            //TODO: fix (not safe to 180/-180 edge)
+            node1.lat = 0.5 * (node1.lat + node2.lat);
+            node1.lon = 0.5 * (node1.lon + node2.lon);
+        }
+
+        //delNode(node2);
+        node2.delNode();
+    }
+
 }

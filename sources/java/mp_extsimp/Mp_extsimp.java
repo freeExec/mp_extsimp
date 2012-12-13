@@ -422,7 +422,8 @@ public class Mp_extsimp {
 
                                 if (thisLineNodes > 0) {
                                     //not the first node of way -> create edge
-                                    Edge jEdge = joinByEdge(Nodes.size() - 2, Nodes.size() - 1);
+                                    //Edge jEdge = joinByEdge(Nodes.size() - 2, Nodes.size() - 1);
+                                    Edge jEdge = joinByEdge(Nodes.get(Nodes.size() - 2), addedNode);
                                     //oneway edges is always -> by geometry
                                     /*Edges[j].oneway = wayOneway;
                                     Edges[j].roadtype = wayClass;
@@ -589,20 +590,20 @@ public class Mp_extsimp {
         mergeNodes(node1, node2, 0);
     }
     //flag: 1 - ignore node2 coords (0 - move node1 to average coordinates)
-    private static void mergeNodes(int node1, int node2, int flag) {
+    private static void mergeNodes(Node node1, Node node2, int flag) {
         int k, i, j;
         Edge edgeJ;
         int p = 0;
 
         //relink edges from node2 to node1
         //p = Nodes.get(node1).edgeL.size();
-        Node node1N = Nodes.get(node1);
-        Node node2N = Nodes.get(node2);
-        k = node2N.edgeL.size();
+        //Node node1N = Nodes.get(node1);
+        //Node node2N = Nodes.get(node2);
+        k = node2.edgeL.size();
         
         for (i = 0; i <= k - 1; i++) {
             //j = node2N.edgeL[i];
-            edgeJ = node2N.edgeL.get(i);
+            edgeJ = node2.edgeL.get(i);
 
             if (edgeJ.node1 == node2) {
                 //edge goes from node2 to X
@@ -614,32 +615,37 @@ public class Mp_extsimp {
             }
             //Nodes.get(node1).edgeL[p] = j;
             //node1N.edgeL.set(p, edgeJ);
-            node1N.edgeL.add(edgeJ);
+            node1.edgeL.add(edgeJ);
             //p = p + 1;
         }
         //Nodes.get(node1).Edges = p;
         //Nodes.get(node2).Edges = 0;
-        node2N.edgeL.clear();
+        node2.edgeL.clear();
 
         //kill all void edges right now
+        /*
         i = 0;
-        p = node1N.edgeL.size();
+        p = node1.edgeL.size();
         while (i < p) {     //Nodes[node1].Edges) {
             //j = Nodes.get(node1).edgeL[i];
-            edgeJ = node1N.edgeL.get(i);
-            if (edgeJ.node1 == edgeJ.node2) { delEdge(j); }
+            edgeJ = node1.edgeL.get(i);
+            if (edgeJ.node1 == edgeJ.node2) { edgeJ.delEdge(); }
             i = i + 1;
+        }
+        */
+        for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
+            if (iEdge.next().node1 == iEdge.next().node2) { iEdge.next().delEdge(); }
         }
 
         if (flag == 1) {
             //Calc average coordinates
             //TODO: fix (not safe to 180/-180 edge)
-            Nodes.get(node1).lat = 0.5 * (Nodes.get(node1).lat + Nodes.get(node2).lat);
-            Nodes.get(node1).lon = 0.5 * (Nodes.get(node1).lon + Nodes.get(node2).lon);
+            node1.lat = 0.5 * (node1.lat + node2.lat);
+            node1.lon = 0.5 * (node1.lon + node2.lon);
         }
 
         //delNode(node2);
-        Nodes.get(node2).delNode();
+        node2.delNode();
     }
 
     //Delete edge and remove all references to it from both nodes
