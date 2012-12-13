@@ -590,8 +590,11 @@ public class Mp_extsimp {
     //MaxCosine2 - cosine of max angle between other edges, during going-by-two-ways
     //MinChainLen - length of min two-way road to join
     public static void joinDirections3(double joinDistance, double maxCosine, double maxCosine2, double minChainLen, double combineDistance) {
-        int i,  j, k, mode1;
-        int e, d, q;
+        int i,  j;
+        Node clusterNode;
+        boolean mode1;
+        int e, d;
+        Edge q;
         double dist1, dist2;
         Bbox bbox_edge;
         double angl = 0;
@@ -665,28 +668,29 @@ public class Mp_extsimp {
             min_dist = joinDistance;
             min_dist_edge = -1;
 
-            //'first
-            mode1 = 0;
+            //first
+            mode1 = false;
 
             while (true) {
 //*TODO:** label found: lSkipNode2:;
-                k = getNodeInBboxByCluster(bbox_edge, mode1);
+                clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
                 //'next (next time)
-                mode1 = 1;
+                mode1 = true;
                 //'no more nodes
-                if (k == -1) {
+                if (clusterNode == null) {
                     //*TODO:** goto found: GoTo lAllNodes;
                     break;
                 }
 
                 //'skip nodes of same edge, deleted and complex nodes
-                if (k == edgeI.node1  || k == edgeI.node2  || Nodes.get(k).nodeID == Mark.MARK_NODEID_DELETED  || Nodes.get(k).Edges != 2) {
+                if (clusterNode == edgeI.node1  || clusterNode == edgeI.node2  || 
+                        clusterNode.nodeID == Mark.MARK_NODEID_DELETED  || clusterNode.edgeL.size() != 2) {
                     //*TODO:** goto found: GoTo lSkipNode2;
                     continue;
                 }
 
                 //'calc dist from found node to our edge
-                dist1 = Node.distanceToSegment(Nodes.get(Edges.get(i).node1), Nodes.get(Edges.get(i).node2), Nodes.get(k));
+                dist1 = Node.distanceToSegment(edgeI.node1, edgeI.node2, clusterNode);
                 DistanceToSegment_last_case = Node.DistanceToSegment_last_case;
                 //'too far, skip
                 if (dist1 > min_dist) {
@@ -695,15 +699,14 @@ public class Mp_extsimp {
                 }
 
                 //node is on join distance, check all (2) edges
-                for (d = 0; d <= 1; d++) {
-                    q = Nodes.get(k).edgeL[d];
+                for (d = 0; d < 2; d++) {
+                    q = clusterNode.edgeL.get(d);
                     //'deleted or 2-way edge or other road class
-                    if (Edges.get(q).node1 == -1 || Edges.get(q).oneway == 0 || Edges.get(q).roadtype != Edges.get(i).roadtype) {
+                    if (q.node1 == null || q.oneway == 0 || q.roadtype != edgeI.roadtype) {
                     //*TODO:** goto found: GoTo lSkipEdge2;
                         continue;
                     }
-                    angl = Node.cosAngleBetweenEdges(Nodes.get(Edges.get(q).node1), Nodes.get(Edges.get(q).node2),
-                            Nodes.get(Edges.get(i).node1), Nodes.get(Edges.get(i).node2));
+                    angl = Edge.cosAngleBetweenEdges(q, edgeI);
                     if (angl < maxCosine) {
                         //contradirectional edge or close
 
@@ -768,9 +771,9 @@ public class Mp_extsimp {
                 if (dist1 < minChainLen) {
                     //road is too short -> unmark all edges and not delete anything
                     for (j = 0; j < Chain.size(); j++) {
-                        for (k = 0; k <= Chain.get(j).Edges - 1; k++) {
-                            if (Edges.get(Chain.get(j).edgeL[k]).mark == 2) {
-                                Edges.get(Chain.get(j).edgeL[k]).mark = 1;
+                        for (clusterNode = 0; clusterNode <= Chain.get(j).Edges - 1; clusterNode++) {
+                            if (Edges.get(Chain.get(j).edgeL[clusterNode]).mark == 2) {
+                                Edges.get(Chain.get(j).edgeL[clusterNode]).mark = 1;
                             }
                         }
                     }
