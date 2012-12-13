@@ -32,7 +32,7 @@ public class Edge {
 
         //find this edge among edges of node1
         i = this.node1; //Edges.get(edge1).node1;
-        //'edge already deleted
+        //edge already deleted
         if (i == -1) { return; }
         for (k = 0; k <= node1.Edges - 1; k++) {
             if (node1.edge[k] == edge1) {

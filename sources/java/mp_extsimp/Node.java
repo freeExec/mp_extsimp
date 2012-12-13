@@ -188,4 +188,8 @@ public class Node {
         return d1;
     }
 
+    //Calc distance from node1 to node2 in metres
+    public static double distance(Node node1, Node node2) {
+        return Math.sqrt(distanceSquare(node1, node2));
+    }    
 }

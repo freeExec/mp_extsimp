@@ -34,10 +34,10 @@ public class Mp_extsimp {
     //private static edge[] Edges;
     private static ArrayList<Edge> Edges;
     //private static int EdgesAlloc = 0;
-    private static int EdgesNum = 0;
+    //private static int EdgesNum = 0;
     
     //Array for building chain of indexes
-    private static ArrayList<Integer> Chain;
+    private static ArrayList<Node> Chain;
     /* private static int[] Chain;
     private static int ChainAlloc = 0;
     private static int ChainNum = 0;*/
@@ -53,8 +53,8 @@ public class Mp_extsimp {
     private static int LabelStatsAlloc = 0;
 
     //Indexes of forward and backward ways during two ways joining
-    private static ArrayList<Integer> TWforw;
-    private static ArrayList<Integer> TWback;
+    private static ArrayList<Edge> TWforw;
+    private static ArrayList<Edge> TWback;
     /*private static int[] TWforw;
     private static int[] TWback;
     private static int TWalloc = 0;
@@ -141,7 +141,7 @@ public class Mp_extsimp {
         Edges = new ArrayList<Edge>();
         //EdgesNum = 0;
 
-        Chain = new ArrayList<Integer>();
+        Chain = new ArrayList<Node>();
         /* ChainAlloc = 1000;
         Chain = new int[ChainAlloc];
         ChainNum = 0;*/
@@ -159,8 +159,8 @@ public class Mp_extsimp {
         TWback = new int[TWalloc];
         TWbackNum = 0;
         TWforwNum = 0;*/
-        TWforw = new ArrayList<Integer>();
-        TWback = new ArrayList<Integer>();
+        TWforw = new ArrayList<Edge>();
+        TWback = new ArrayList<Edge>();
     }
 
     //Load .mp file
@@ -652,10 +652,10 @@ public class Mp_extsimp {
     }
 
     //Delete edge and remove all references to it from both nodes
-    public static void delEdge(int edge1) {
+    public static void delEdge(Edge edge1) {
         //find this edge among edges of node1
-
-        Edge dEdge = Edges.get(edge1);
+        Edge dEdge = edge1;
+        //Edge dEdge = Edges.get(edge1);
         dEdge.delEdge(edge1, Nodes.get(dEdge.node1), Nodes.get(dEdge.node2));
 /*
         //find this edge among edges of node2
@@ -689,13 +689,15 @@ public class Mp_extsimp {
         int roadtype = 0;
         int speednew = 0;
 
-        //'chain of forward edges
-        int[] edgesForw;
-        //'chain of backward edges
-        int[] edgesBack;
-        //'1 if road is circled
+        //chain of forward edges
+        //int[] edgesForw;
+        ArrayList<Edge> edgesForw;
+        //chain of backward edges
+        //int[] edgesBack;
+        ArrayList<Edge> edgesBack;
+        //1 if road is circled
         int loopChain = 0;
-        //'len of half of road
+        //len of half of road
         int halfChain = 0;
 
         //Algorithm will check all non-link oneway edges for presence of contradirectional edge in the vicinity
@@ -819,9 +821,9 @@ public class Mp_extsimp {
 
                 roadtype = Edges.get(i).roadtype;
                 loopChain = 0;
-                ChainNum = 0;
-                TWforwNum = 0;
-                TWbackNum = 0;
+                //ChainNum = 0;
+                //TWforwNum = 0;
+                //TWbackNum = 0;
 
                 //first pass, in direction of edge i
                 goByTwoWays(i, min_dist_edge, joinDistance, combineDistance, maxCosine2, 0);
@@ -829,31 +831,33 @@ public class Mp_extsimp {
                 //reverse of TWforw and TWback removed, as order of edges have no major effect
 
                 //reverse Chain
-                reverseArray(Chain, ChainNum);
+                //reverseArray(Chain, ChainNum);
 
                 //second pass, in direction of min_dist_edge
                 goByTwoWays(min_dist_edge, i, joinDistance, combineDistance, maxCosine2, 1);
 
-                //'first and last nodes coincide - this is loop road
-                if (Chain[0] == Chain[ChainNum - 1]) { loopChain = 1; }
+                //first and last nodes coincide - this is loop road
+                if (Chain.get(0).equals(Chain.get(Chain.size() - 1))) { loopChain = 1; }
 
-                //'half len of road in nodes
-                halfChain = ChainNum / 2;
-                //'will "kill" halfchain limit for very short loops
-                if (halfChain < 10) { halfChain = ChainNum + 1; }
+                //half len of road in nodes
+                halfChain = Chain.size() / 2;
+                //will "kill" halfchain limit for very short loops
+                // TODO: возможно +1 не нужен
+                if (halfChain < 10) { halfChain = Chain.size() + 1; }
 
                 //call metric length of found road
                 dist1 = 0;
-                for (j = 1; j <= ChainNum - 1; j++) {
-                    dist1 = dist1 + distance(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
+                for (j = 1; j < Chain.size(); j++) {
+                    // TODO: марк вроде бы как маркер, а тут как индекс ?
+                    dist1 += Node.distance(Nodes.get(Chain.get(j - 1).mark), Nodes.get(Chain.get(j).mark));
                 }
 
                 if (dist1 < minChainLen) {
                     //road is too short -> unmark all edges and not delete anything
-                    for (j = 0; j <= ChainNum - 1; j++) {
-                        for (k = 0; k <= Nodes.get(Chain[j]).Edges - 1; k++) {
-                            if (Edges.get(Nodes.get(Chain[j]).edge[k]).mark == 2) {
-                                Edges.get(Nodes.get(Chain[j]).edge[k]).mark = 1;
+                    for (j = 0; j < Chain.size(); j++) {
+                        for (k = 0; k <= Chain.get(j).Edges - 1; k++) {
+                            if (Edges.get(Chain.get(j).edge[k]).mark == 2) {
+                                Edges.get(Chain.get(j).edge[k]).mark = 1;
                             }
                         }
                     }
@@ -875,25 +879,31 @@ public class Mp_extsimp {
                 //this is considired acceptable, as they are near edges of very same road
 
                 //G.redim(edgesForw, ChainNum);
-                edgesForw = new int[ChainNum];
+                //edgesForw = new int[ChainNum];
                 //G.redim(edgesBack, ChainNum);
-                edgesBack = new int[ChainNum];
-                for (j = 0; j <= ChainNum - 1; j++) {
-                    edgesForw[j] = -1;
-                    edgesBack[j] = -1;
+                //edgesBack = new int[ChainNum];
+                // TODO: не уверен что не будет расширение элементов, но буду надеяться
+                edgesForw = new ArrayList<Edge>(Chain.size());
+                edgesBack = new ArrayList<Edge>(Chain.size());
+                
+                // TODO: думаю не актуально
+                /*
+                for (j = 0; j < Chain.size(); j++) {
+                    edgesForw.set(j, null);    // -1;
+                    edgesBack.set(j, null);    // -1;
                 }
-
+                */
                 //process forward direction
-                for (j = 0; j <= TWforwNum - 1; j++) {
-                    e = Edges.get(TWforw[j]).node1;
-                    d = Edges.get(TWforw[j]).node2;
+                for (j = 0; j <= TWforw.size() - 1; j++) {
+                    e = TWforw.get(j).node1;
+                    d = TWforw.get(j).node2;
                     //get indexes of nodes inside Chain
-                    e = findInChain(e);
-                    d = findInChain(d);
+                    e = findInChain(Nodes.get(e));
+                    d = findInChain(Nodes.get(d));
                     if (e == -1 || d == -1) {
                         //(should not happen)
                         //edge with nodes not in chain - skip
-                        //*TODO:** goto found: GoTo lSkip1;
+                //*TODO:** goto found: GoTo lSkip1;
                         continue;
                     }
 
@@ -902,11 +912,11 @@ public class Mp_extsimp {
                         // ... e ---> d .....
                         //skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
                         if (loopChain == 1  && (d - e) > halfChain) { 
-                        //*TODO:** label found: //*TODO:** goto found: GoTo lSkip1:;
+                //*TODO:** goto found: GoTo lSkip1:;
                         }
                         for (q = e; q <= d - 1; q++) {
                             //in forward direction between q and q+1 node is edge TWforw(j)
-                            edgesForw[q] = TWforw[j];
+                            edgesForw.set(q, TWforw.get(j));
                         }
                     }
                     else {
@@ -914,17 +924,17 @@ public class Mp_extsimp {
                         // ---.---> d .... ... .... e --->
                         //'on straight chains forward edge could not go backward without pleat
                         if (loopChain == 0) {
-                            //*TODO:** goto found: GoTo lSkip1;
+                //*TODO:** goto found: GoTo lSkip1;
                             continue;
                         }
                         if ((e - d) > halfChain) {
                             //e and d is close to ends of chain
                             //-> this is really forward edge crossing 0 of chain in a loop road
-                            for (q = 0; q <= d - 1; q++) {
-                                edgesForw[q] = TWforw[j];
+                            for (q = 0; q < d; q++) {
+                                edgesForw.set(q, TWforw.get(j));
                             }
-                            for (q = e; q <= ChainNum - 1; q++) {
-                                edgesForw[q] = TWforw[j];
+                            for (q = e; q < Chain.size(); q++) {
+                                edgesForw.set(q, TWforw.get(j));
                             }
                         }
                     }
@@ -932,16 +942,16 @@ public class Mp_extsimp {
                 }
 
                 //process backward direction
-                for (j = 0; j <= TWbackNum - 1; j++) {
-                    e = Edges.get(TWback[j]).node1;
-                    d = Edges.get(TWback[j]).node2;
-                    //'get indexes of nodes inside Chain
-                    e = findInChain(e);
-                    d = findInChain(d);
+                for (j = 0; j < TWback.size(); j++) {
+                    e = TWback.get(j).node1;
+                    d = TWback.get(j).node2;
+                    //get indexes of nodes inside Chain
+                    e = findInChain(Nodes.get(e));
+                    d = findInChain(Nodes.get(d));
                     if (e == -1  || d == -1) {
                         //(should not happen)
                         //edge with nodes not in chain - skip
-                        //*TODO:** goto found: GoTo lSkip2;
+            //*TODO:** goto found: GoTo lSkip2;
                         continue;
                     }
 
@@ -953,8 +963,8 @@ public class Mp_extsimp {
                             //*TODO:** label found: //*TODO:** goto found: GoTo lSkip2:;
                             continue;
                         }
-                        for (q = d; q <= e - 1; q++) {
-                            edgesBack[q] = TWback[j];
+                        for (q = d; q < e; q++) {
+                            edgesBack.set(q, TWback.get(j));
                         }
                     }
                     else {
@@ -968,36 +978,40 @@ public class Mp_extsimp {
                         if ((d - e) > halfChain) {
                             //e and d is close to ends of chain
                             //-> this is really backward edge crossing 0 of chain in a loop road
-                            for (q = 0; q <= e - 1; q++) {
-                                edgesBack[q] = TWback[j];
+                            for (q = 0; q < e; q++) {
+                                edgesBack.set(q, TWback.get(j));
                             }
-                            for (q = d; q <= ChainNum - 1; q++) {
-                                edgesBack[q] = TWback[j];
+                            for (q = d; q < Chain.size(); q++) {
+                                edgesBack.set(q, TWback.get(j));
                             }
                         }
                     }
 //*TODO:** label found: lSkip2:;
                 }
 
-                for (j = 1; j <= ChainNum - 1; j++) {
-                    d = Nodes.get(Chain[j - 1]).mark;
-                    e = Nodes.get(Chain[j]).mark;
+                for (j = 1; j < Chain.size(); j++) {
+                    Node chainJ_1 = Chain.get(j - 1);
+                    Node chainJ = Chain.get(j);
+                    Edge edgesForwJ_1 = edgesForw.get(j - 1);
+                    Edge edgesBackJ_1 = edgesBack.get(j - 1);
+                    d = chainJ_1.mark;
+                    e = chainJ.mark;
                     if (d != e) {
                         /*k = joinByEdge(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
                         Edges.get(k).roadtype = roadtype;
                         Edges.get(k).oneway = 0;
                         Edges.get(k).mark = 1;
                         */
-                        Edge edg = joinByEdge(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
+                        Edge edg = joinByEdge(chainJ_1.mark, chainJ.mark);
                         // TODO: не будет ли потери при байте
                         edg.roadtype = (byte)roadtype;
                         edg.oneway = 0;
                         edg.mark = 1;
 
-                        if ((edgesForw[j - 1] == -1) && (edgesBack[j - 1] == -1)) {
+                        if ((edgesForwJ_1 == null) && (edgesBackJ_1 == null)) {
                             //no edges for this interval between nodes
                             //(should never happens)
-                            //'default value
+                            //default value
                             /*Edges.get(k).speed = 3;
                             Edges.get(k).label = "";*/
                             edg.speed = 3;
@@ -1007,15 +1021,15 @@ public class Mp_extsimp {
                             //get minimal speed class of both edges
                             speednew = 10;
                             resetLabelStats();
-                            if (edgesForw[j - 1] != -1) {
+                            if (edgesForwJ_1 != null) {
                                 //forward edge present
-                                speednew = Edges.get(edgesForw[j - 1]).speed;
-                                addLabelStat0(Edges.get(edgesForw[j - 1]).label);
+                                speednew = edgesForwJ_1.speed;
+                                addLabelStat0(edgesForwJ_1.label);
                             }
-                            if (edgesBack[j - 1] != -1) {
+                            if (edgesBackJ_1 != null) {
                                 //backward edge present
-                                if (speednew > Edges.get(edgesBack[j - 1]).speed) { speednew = Edges.get(edgesBack[j - 1]).speed; }
-                                addLabelStat0(Edges.get(edgesBack[j - 1]).label);
+                                if (speednew > edgesBackJ_1.speed) { speednew = edgesBackJ_1.speed; }
+                                addLabelStat0(edgesBackJ_1.label);
                             }
                             /*Edges.get(k).speed = speednew;
                             Edges.get(k).label = getLabelByStats(0);*/
@@ -1031,29 +1045,29 @@ public class Mp_extsimp {
                         //joins into:
                         //        *--->*----*------*----*-------*-----*<------*
 
-                        if (edgesBack[j - 1] == -1) {
+                        if (edgesBackJ_1 == null) {
                             //no backward edge - result in one-way
                             //Edges.get(k).oneway = 1;
                             edg.oneway = 1;
                         }
-                        else if (edgesForw[j - 1] == -1) {
+                        else if (edgesForwJ_1 == null) {
                             //no forward edge - result in one-way, backward to other road
                             /*Edges.get(k).oneway = 1;
                             Edges.get(k).node1 = Nodes[Chain[j]]..mark;
                             Edges.get(k).node2 = Nodes[Chain[j - 1]]..mark;*/
                             edg.oneway = 1;
-                            edg.node1 = Nodes.get(Chain[j]).mark;
-                            edg.node1 = Nodes.get(Chain[j - 1]).mark;
+                            edg.node1 = chainJ.mark;
+                            edg.node2 = chainJ_1.mark;
                         }
                     }
                 }
 
                 //delete all old edges
-                for (j = 0; j <= TWforwNum - 1; j++) {
-                    delEdge(TWforw[j]);
+                for (j = 0; j < TWforw.size(); j++) {
+                    delEdge(TWforw.get(j));
                 }
-                for (j = 0; j <= TWbackNum - 1; j++) {
-                    delEdge(TWback[j]);
+                for (j = 0; j < TWback.size(); j++) {
+                    delEdge(TWback.get(j));
                 }
 
                 //merge all old nodes into new ones
@@ -1674,5 +1688,15 @@ public class Mp_extsimp {
             }*/
         }
     }
-
+    
+    //Find index of node1 in Chain() array, return -1 if not present
+    public static int findInChain(Node node1) {
+        /*int i = 0;
+        
+        for (i = 0; i < Chain.size(); i++) {
+            if (Chain[i] == node1) { return 0; }
+        }*/
+        if (Chain.contains(node1)) { return 0; }
+        return -1;
+    }
 }
