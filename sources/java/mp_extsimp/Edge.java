@@ -28,7 +28,7 @@ public class Edge {
     }
 
     //Delete edge and remove all references to it from both nodes
-    public void delEdge(Node node1) {
+    public void delEdge() { //Node node1) {
         
         //find this edge among edges of node1
         //i = this.node1; //Edges.get(edge1).node1;
@@ -48,7 +48,8 @@ public class Edge {
         }
         */
         //*TODO:** label found: lFound1:;
-        node1.edgeL.remove(this);
+        //node1.edgeL.remove(this);
+        this.node1.edgeL.remove(this);
     }
 
         //Get bounding box of edge
