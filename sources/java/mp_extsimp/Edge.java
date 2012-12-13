@@ -31,25 +31,12 @@ public class Edge {
     public void delEdge() { //Node node1) {
         
         //find this edge among edges of node1
-        //i = this.node1; //Edges.get(edge1).node1;
         //edge already deleted        
         if (this.node1 == null) { return; }
-        /*
-        p = node1.edgeL.size();
-        for (k = 0; k < p; k++) {
-            if (node1.edgeL.get(k).equals(this)) {
-                //remove edge from edges of node1
-                //node1.edgeL[k] = node1.edgeL[node1.Edges - 1];                
-                //node1.Edges --;
-                node1.edgeL.remove(this);
-                //*TODO:** goto found: GoTo lFound1;
-                break;
-            }
-        }
-        */
-        //*TODO:** label found: lFound1:;
-        //node1.edgeL.remove(this);
         this.node1.edgeL.remove(this);
+        this.node1 = null;
+        this.node2.edgeL.remove(this);
+        this.node2 = null;
     }
 
         //Get bounding box of edge

@@ -529,7 +529,7 @@ public class Mp_extsimp {
                     }
                     else {
                         //hould join
-                        mergeNodes(iDmap[k], i);
+                        Node.mergeNodes(Nodes.get(iDmap[k]), Nodes.get(i));
                     }
                 }
 //*TODO:** label found: lSkip:;
@@ -561,12 +561,12 @@ public class Mp_extsimp {
                     for (j = 0; j <= i - 1; j++) {
                         if (iDmap[j] == k) {
                             //found - not first occurence - should join
-                            mergeNodes(nodeMap[j], i);
+                            Node.mergeNodes(Nodes.get(nodeMap[j]), Nodes.get(i));
                             //*TODO:** goto found: GoTo lFound;
                             break;
                         }
                     }
-                    if (j > i - 1) {        // добавли из-за брейка в цикле
+                    if (j > i - 1) {        // добавил из-за брейка в цикле
                         //not found - first occurence of NodeID
                         nodeMap[mapNum] = i;
                         iDmap[mapNum] = k;
@@ -583,92 +583,6 @@ public class Mp_extsimp {
             }
         }
 //*TODO:** label found: lExit:;
-    }
-
-    //Merge node2 to node1 with relink of all edges
-    private static void mergeNodes(int node1, int node2) {
-        mergeNodes(node1, node2, 0);
-    }
-    //flag: 1 - ignore node2 coords (0 - move node1 to average coordinates)
-    private static void mergeNodes(Node node1, Node node2, int flag) {
-        int k, i, j;
-        Edge edgeJ;
-        int p = 0;
-
-        //relink edges from node2 to node1
-        //p = Nodes.get(node1).edgeL.size();
-        //Node node1N = Nodes.get(node1);
-        //Node node2N = Nodes.get(node2);
-        k = node2.edgeL.size();
-        
-        for (i = 0; i <= k - 1; i++) {
-            //j = node2N.edgeL[i];
-            edgeJ = node2.edgeL.get(i);
-
-            if (edgeJ.node1 == node2) {
-                //edge goes from node2 to X
-                edgeJ.node1 = node1;
-            }
-            if (edgeJ.node2 == node2) {
-                //edge goes from X to node2
-                edgeJ.node2 = node1;
-            }
-            //Nodes.get(node1).edgeL[p] = j;
-            //node1N.edgeL.set(p, edgeJ);
-            node1.edgeL.add(edgeJ);
-            //p = p + 1;
-        }
-        //Nodes.get(node1).Edges = p;
-        //Nodes.get(node2).Edges = 0;
-        node2.edgeL.clear();
-
-        //kill all void edges right now
-        /*
-        i = 0;
-        p = node1.edgeL.size();
-        while (i < p) {     //Nodes[node1].Edges) {
-            //j = Nodes.get(node1).edgeL[i];
-            edgeJ = node1.edgeL.get(i);
-            if (edgeJ.node1 == edgeJ.node2) { edgeJ.delEdge(); }
-            i = i + 1;
-        }
-        */
-        for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
-            if (iEdge.next().node1 == iEdge.next().node2) { iEdge.next().delEdge(); }
-        }
-
-        if (flag == 1) {
-            //Calc average coordinates
-            //TODO: fix (not safe to 180/-180 edge)
-            node1.lat = 0.5 * (node1.lat + node2.lat);
-            node1.lon = 0.5 * (node1.lon + node2.lon);
-        }
-
-        //delNode(node2);
-        node2.delNode();
-    }
-
-    //Delete edge and remove all references to it from both nodes
-    public static void delEdge(Edge edge1) {
-        //find this edge among edges of node1
-        Edge dEdge = edge1;
-        //Edge dEdge = Edges.get(edge1);
-        dEdge.delEdge(edge1, Nodes.get(dEdge.node1), Nodes.get(dEdge.node2));
-/*
-        //find this edge among edges of node2
-        i = Edges[edge1]..node2;
-        for (k = 0; k <= Nodes[i].Edges - 1; k++) {
-            if (Nodes[i]..edge(k) == edge1) {
-                //remove edge from edges of node2
-                Nodes[i]..edge(k) = Nodes[i]..edge(Nodes[i].Edges - 1);
-                Nodes[i].Edges = Nodes[i].Edges - 1;
-                //*TODO:** goto found: GoTo lFound2;
-            }
-        }
-        //*TODO:** label found: lFound2:;
-        //'mark node as deleted
-        Edges[edge1]..node1 = -1;
-        */
     }
 
     //Join two directions of road way
