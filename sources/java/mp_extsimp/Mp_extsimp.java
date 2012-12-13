@@ -472,29 +472,10 @@ public class Mp_extsimp {
     //Join two nodes by new edge
     //node1 - start node, node2 - end node
     //return: index of new edge
-    public static Edge joinByEdge(int node1, int node2) {
-        //int _rtn = 0;
-        //int k = 0;
-        //Edges[EdgesNum].node1 = node1;
-        //Edges[EdgesNum].node2 = node2;
-        Edge result = new Edge(node1, node2);
+    public static Edge joinByEdge(Node node1, Node node2) {
+        Edge result = Edge.joinByEdge(node1, node2);
         Edges.add(result);
-        
-        //add edge to both nodes
-        /*
-        k = Nodes[node1].Edges;
-        Nodes[node1].edge[k] = EdgesNum;
-        Nodes[node1].Edges = Nodes[node1].Edges + 1;
-        k = Nodes[node2].Edges;
-        Nodes[node2].edge[k] = EdgesNum;
-        Nodes[node2].Edges = Nodes[node2].Edges + 1;
-        */
-        Nodes.get(node1).addEdge(Edges.size());
-        Nodes.get(node2).addEdge(Edges.size());
-        
-        //_rtn = EdgesNum;
-        //addEdge();
-        return result; //EdgesNum; //_rtn;
+        return result;
     }
     
     /*
@@ -610,33 +591,43 @@ public class Mp_extsimp {
     //flag: 1 - ignore node2 coords (0 - move node1 to average coordinates)
     private static void mergeNodes(int node1, int node2, int flag) {
         int k, i, j;
+        Edge edgeJ;
         int p = 0;
 
         //relink edges from node2 to node1
-        p = Nodes.get(node1).Edges;
-        k = Nodes.get(node2).Edges;
+        //p = Nodes.get(node1).edgeL.size();
+        Node node1N = Nodes.get(node1);
+        Node node2N = Nodes.get(node2);
+        k = node2N.edgeL.size();
+        
         for (i = 0; i <= k - 1; i++) {
-            j = Nodes.get(node2).edge[i];
+            //j = node2N.edgeL[i];
+            edgeJ = node2N.edgeL.get(i);
 
-            if (Edges.get(j).node1 == node2) {
+            if (edgeJ.node1 == node2) {
                 //edge goes from node2 to X
-                Edges.get(j).node1 = node1;
+                edgeJ.node1 = node1;
             }
-            if (Edges.get(j).node2 == node2) {
+            if (edgeJ.node2 == node2) {
                 //edge goes from X to node2
-                Edges.get(j).node2 = node1;
+                edgeJ.node2 = node1;
             }
-            Nodes.get(node1).edge[p] = j;
-            p = p + 1;
+            //Nodes.get(node1).edgeL[p] = j;
+            //node1N.edgeL.set(p, edgeJ);
+            node1N.edgeL.add(edgeJ);
+            //p = p + 1;
         }
-        Nodes.get(node1).Edges = p;
-        Nodes.get(node2).Edges = 0;
+        //Nodes.get(node1).Edges = p;
+        //Nodes.get(node2).Edges = 0;
+        node2N.edgeL.clear();
 
         //kill all void edges right now
         i = 0;
+        p = node1N.edgeL.size();
         while (i < p) {     //Nodes[node1].Edges) {
-            j = Nodes.get(node1).edge[i];
-            if (Edges.get(j).node1 == Edges.get(j).node2) { delEdge(j); }
+            //j = Nodes.get(node1).edgeL[i];
+            edgeJ = node1N.edgeL.get(i);
+            if (edgeJ.node1 == edgeJ.node2) { delEdge(j); }
             i = i + 1;
         }
 
@@ -783,7 +774,7 @@ public class Mp_extsimp {
 
                 //node is on join distance, check all (2) edges
                 for (d = 0; d <= 1; d++) {
-                    q = Nodes.get(k).edge[d];
+                    q = Nodes.get(k).edgeL[d];
                     //'deleted or 2-way edge or other road class
                     if (Edges.get(q).node1 == -1 || Edges.get(q).oneway == 0 || Edges.get(q).roadtype != Edges.get(i).roadtype) {
                     //*TODO:** goto found: GoTo lSkipEdge2;
@@ -856,8 +847,8 @@ public class Mp_extsimp {
                     //road is too short -> unmark all edges and not delete anything
                     for (j = 0; j < Chain.size(); j++) {
                         for (k = 0; k <= Chain.get(j).Edges - 1; k++) {
-                            if (Edges.get(Chain.get(j).edge[k]).mark == 2) {
-                                Edges.get(Chain.get(j).edge[k]).mark = 1;
+                            if (Edges.get(Chain.get(j).edgeL[k]).mark == 2) {
+                                Edges.get(Chain.get(j).edgeL[k]).mark = 1;
                             }
                         }
                     }
@@ -1439,7 +1430,7 @@ public class Mp_extsimp {
         if (calc_side == 2) {
             //search edge from side2j which is most opposite to edge_side1
             for (i = 0; i <= Nodes.get(side2j).Edges - 1; i++) {
-                j = Nodes.get(side2j).edge[i];
+                j = Nodes.get(side2j).edgeL[i];
                 // TODO: возможно что-то не так, было j == edge_side2 (индексы)
                 if (Edges.get(j) == edge_side2  || Edges.get(j).node1 < 0 || Edges.get(j).oneway == 0
                         || Edges.get(j).roadtype != roadtype  || Edges.get(j).node2 != side2j) {
@@ -1500,7 +1491,7 @@ public class Mp_extsimp {
         else {
             //search edge from side1j which is most opposite to edge_side2
             for (i = 0; i <= Nodes.get(side1j).Edges - 1; i++) {
-                j = Nodes.get(side1j).edge[i];
+                j = Nodes.get(side1j).edgeL[i];
                 Edge edgeJ = Edges.get(j);
                 if (edgeJ == edge_side1  || edgeJ.oneway == 0  || edgeJ.roadtype != roadtype  || edgeJ.node1 != side1j) {
                     //*TODO:** goto found: GoTo lSkipEdgeSide1;

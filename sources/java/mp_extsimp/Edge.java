@@ -9,8 +9,10 @@ package mp_extsimp;
  * @author freeExec
  */
 public class Edge {
-    public int node1;      //first node (index in Nodes array)
-    public int node2;      //second node
+    //public int node1;      //first node (index in Nodes array)
+    //public int node2;      //second node
+    public Node node1;
+    public Node node2;
     public byte roadtype;   //roadtype, see HIGHWAY_ consts
     public byte oneway;     //0 - no, 1 - yes ( goes from node1 to node2 )
     public int mark;    //internal marker for all-network algo-s
@@ -20,30 +22,33 @@ public class Edge {
     public Edge() {
     }
 
-    public Edge(int node1, int node2) {
+    public Edge(Node node1, Node node2) {
         this.node1 = node1;
         this.node2 = node2;
     }
 
     //Delete edge and remove all references to it from both nodes
-    public void delEdge(int edge1, Node node1, Node node2) {
-        int i;
-        int k;
-
+    public void delEdge(Node node1) {
+        
         //find this edge among edges of node1
-        i = this.node1; //Edges.get(edge1).node1;
-        //edge already deleted
-        if (i == -1) { return; }
-        for (k = 0; k <= node1.Edges - 1; k++) {
-            if (node1.edge[k] == edge1) {
+        //i = this.node1; //Edges.get(edge1).node1;
+        //edge already deleted        
+        if (this.node1 == null) { return; }
+        /*
+        p = node1.edgeL.size();
+        for (k = 0; k < p; k++) {
+            if (node1.edgeL.get(k).equals(this)) {
                 //remove edge from edges of node1
-                node1.edge[k] = node1.edge[node1.Edges - 1];
-                node1.Edges --;
+                //node1.edgeL[k] = node1.edgeL[node1.Edges - 1];                
+                //node1.Edges --;
+                node1.edgeL.remove(this);
                 //*TODO:** goto found: GoTo lFound1;
                 break;
             }
         }
+        */
         //*TODO:** label found: lFound1:;
+        node1.edgeL.remove(this);
     }
 
         //Get bounding box of edge
@@ -67,4 +72,33 @@ public class Edge {
         }
         return result;
     }
+
+    //Join two nodes by new edge
+    //node1 - start node, node2 - end node
+    //return: index of new edge
+    public static Edge joinByEdge(Node node1, Node node2) {
+        //int _rtn = 0;
+        //int k = 0;
+        //Edges[EdgesNum].node1 = node1;
+        //Edges[EdgesNum].node2 = node2;
+        Edge result = new Edge(node1, node2);
+        //Edges.add(result);
+        
+        //add edge to both nodes
+        /*
+        k = Nodes[node1].Edges;
+        Nodes[node1].edge[k] = EdgesNum;
+        Nodes[node1].Edges = Nodes[node1].Edges + 1;
+        k = Nodes[node2].Edges;
+        Nodes[node2].edge[k] = EdgesNum;
+        Nodes[node2].Edges = Nodes[node2].Edges + 1;
+        */
+        node1.addEdge(result);
+        node2.addEdge(result);
+        
+        //_rtn = EdgesNum;
+        //addEdge();
+        return result; //EdgesNum; //_rtn;
+    }
+
 }

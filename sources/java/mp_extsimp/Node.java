@@ -4,6 +4,8 @@
  */
 package mp_extsimp;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author freeExec
@@ -31,8 +33,8 @@ public class Node {
     public double lat;      //Latitude
     public double lon;      //Longitude
     public int nodeID;     //NodeID from source .mp, -1 - not set, -2 - node killed
-    public int[] edge;   //all edges (values - indexes in Edges array)
-    public int Edges;      //number of edges, -1 means "not counted"
+    public ArrayList<Edge> edgeL;   //all edges (values - indexes in Edges array)
+    //public int Edges;      //number of edges, -1 means "not counted"
     public int mark;       //internal marker for all-network algo-s
     public double temp_dist;//internal value for for all-network algo-s
     
@@ -44,22 +46,28 @@ public class Node {
         this.nodeID = nodeID;
         Init();
     }
-    
+/*    
     public void addEdge(int Id) {
         this.edge[Edges++] = Id;
     }
+*/    
+    public void addEdge(Edge edgeIn) {
+        this.edgeL.add(edgeIn);
+    }
+        
     
     private void Init() {
-        this.edge = new int[20];
+        this.edgeL = new ArrayList<Edge>();//new int[20];
     }
 
     //Delete node with all connected edges
     public void delNode() {
-        while (this.Edges > 0) {
-            Mp_extsimp.delEdge(this.edge[0]);
+        while (this.edgeL.size() > 0) {
+            //Mp_extsimp.delEdge(this.edgeL[0]);
+            this.edgeL.get(0).delEdge(this);
         }
-        this.Edges = 0;
-        //'mark node as deleted
+        //this.Edges = 0;
+        //mark node as deleted
         this.nodeID = MARK_NODEID_DELETED;
     }
 
