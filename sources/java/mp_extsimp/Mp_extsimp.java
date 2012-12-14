@@ -593,6 +593,7 @@ public class Mp_extsimp {
         int i,  j;
         Node clusterNode;
         boolean mode1;
+        Node eNode, dNode;
         int e, d;
         Edge q;
         double dist1, dist2;
@@ -699,8 +700,8 @@ public class Mp_extsimp {
                 }
 
                 //node is on join distance, check all (2) edges
-                for (d = 0; d < 2; d++) {
-                    q = clusterNode.edgeL.get(d);
+                for (int d1 = 0; d1 < 2; d1++) {
+                    q = clusterNode.edgeL.get(d1);
                     //'deleted or 2-way edge or other road class
                     if (q.node1 == null || q.oneway == 0 || q.roadtype != edgeI.roadtype) {
                     //*TODO:** goto found: GoTo lSkipEdge2;
@@ -814,11 +815,11 @@ public class Mp_extsimp {
                 */
                 //process forward direction
                 for (j = 0; j <= TWforw.size() - 1; j++) {
-                    e = TWforw.get(j).node1;
-                    d = TWforw.get(j).node2;
+                    eNode = TWforw.get(j).node1;
+                    dNode = TWforw.get(j).node2;
                     //get indexes of nodes inside Chain
-                    e = findInChain(Nodes.get(e));
-                    d = findInChain(Nodes.get(d));
+                    e = Chain.indexOf(eNode);
+                    d = Chain.indexOf(dNode);
                     if (e == -1 || d == -1) {
                         //(should not happen)
                         //edge with nodes not in chain - skip
@@ -832,10 +833,11 @@ public class Mp_extsimp {
                         //skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
                         if (loopChain == 1  && (d - e) > halfChain) { 
                 //*TODO:** goto found: GoTo lSkip1:;
+                            continue;
                         }
-                        for (q = e; q <= d - 1; q++) {
+                        for (int q1 = e; q1 < d; q1++) {
                             //in forward direction between q and q+1 node is edge TWforw(j)
-                            edgesForw.set(q, TWforw.get(j));
+                            edgesForw.set(q1, TWforw.get(j));
                         }
                     }
                     else {
@@ -849,11 +851,11 @@ public class Mp_extsimp {
                         if ((e - d) > halfChain) {
                             //e and d is close to ends of chain
                             //-> this is really forward edge crossing 0 of chain in a loop road
-                            for (q = 0; q < d; q++) {
-                                edgesForw.set(q, TWforw.get(j));
+                            for (int q1 = 0; q1 < d; q1++) {
+                                edgesForw.set(q1, TWforw.get(j));
                             }
-                            for (q = e; q < Chain.size(); q++) {
-                                edgesForw.set(q, TWforw.get(j));
+                            for (int q1 = e; q1 < Chain.size(); q1++) {
+                                edgesForw.set(q1, TWforw.get(j));
                             }
                         }
                     }
@@ -862,11 +864,11 @@ public class Mp_extsimp {
 
                 //process backward direction
                 for (j = 0; j < TWback.size(); j++) {
-                    e = TWback.get(j).node1;
-                    d = TWback.get(j).node2;
+                    eNode = TWback.get(j).node1;
+                    dNode = TWback.get(j).node2;
                     //get indexes of nodes inside Chain
-                    e = findInChain(Nodes.get(e));
-                    d = findInChain(Nodes.get(d));
+                    e = Chain.indexOf(eNode);
+                    d = Chain.indexOf(dNode);
                     if (e == -1  || d == -1) {
                         //(should not happen)
                         //edge with nodes not in chain - skip
@@ -882,8 +884,8 @@ public class Mp_extsimp {
                             //*TODO:** label found: //*TODO:** goto found: GoTo lSkip2:;
                             continue;
                         }
-                        for (q = d; q < e; q++) {
-                            edgesBack.set(q, TWback.get(j));
+                        for (int q1 = d; q1 < e; q1++) {
+                            edgesBack.set(q1, TWback.get(j));
                         }
                     }
                     else {
@@ -897,11 +899,11 @@ public class Mp_extsimp {
                         if ((d - e) > halfChain) {
                             //e and d is close to ends of chain
                             //-> this is really backward edge crossing 0 of chain in a loop road
-                            for (q = 0; q < e; q++) {
-                                edgesBack.set(q, TWback.get(j));
+                            for (int q1 = 0; q1 < e; q1++) {
+                                edgesBack.set(q1, TWback.get(j));
                             }
-                            for (q = d; q < Chain.size(); q++) {
-                                edgesBack.set(q, TWback.get(j));
+                            for (int q1 = d; q1 < Chain.size(); q1++) {
+                                edgesBack.set(q1, TWback.get(j));
                             }
                         }
                     }
@@ -913,9 +915,9 @@ public class Mp_extsimp {
                     Node chainJ = Chain.get(j);
                     Edge edgesForwJ_1 = edgesForw.get(j - 1);
                     Edge edgesBackJ_1 = edgesBack.get(j - 1);
-                    d = chainJ_1.mark;
-                    e = chainJ.mark;
-                    if (d != e) {
+                    dNode = chainJ_1.mark;
+                    eNode = chainJ.mark;
+                    if (dNode != eNode) {
                         /*k = joinByEdge(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
                         Edges.get(k).roadtype = roadtype;
                         Edges.get(k).oneway = 0;
@@ -982,15 +984,25 @@ public class Mp_extsimp {
                 }
 
                 //delete all old edges
-                for (j = 0; j < TWforw.size(); j++) {
-                    delEdge(TWforw.get(j));
+                /*for (j = 0; j < TWforw.size(); j++) {
+                    TWforw.get(j).delEdge();
                 }
                 for (j = 0; j < TWback.size(); j++) {
                     delEdge(TWback.get(j));
                 }
+                */
+                for(Iterator<Edge> iEdge = TWforw.iterator(); iEdge.hasNext();) {
+                    iEdge.next().delEdge();
+                }
+                for(Iterator<Edge> iEdge = TWback.iterator(); iEdge.hasNext();) {
+                    iEdge.next().delEdge();
+                }
 
                 //merge all old nodes into new ones
-                for (j = 0; j <= ChainNum - 1; j++) {
+                /*for (j = 0; j <= ChainNum - 1; j++) {
+                    mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
+                }*/
+                for(Iterator<Node> iNode = Chain.iterator(); iNode.hasNext();) {
                     mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
                 }
 
@@ -1600,15 +1612,16 @@ public class Mp_extsimp {
             }*/
         }
     }
-    
+    /*
     //Find index of node1 in Chain() array, return -1 if not present
     public static int findInChain(Node node1) {
         /*int i = 0;
         
         for (i = 0; i < Chain.size(); i++) {
             if (Chain[i] == node1) { return 0; }
-        }*/
-        if (Chain.contains(node1)) { return 0; }
+        }*//*
+        if (Chain.contains(node1)) { return Chain.indexOf(node1); }
         return -1;
     }
+    */
 }
