@@ -182,7 +182,8 @@ public class Node {
         }
         */
         for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
-            if (iEdge.next().node1 == iEdge.next().node2) { iEdge.next().delEdge(); }
+            Edge iEdgeN = iEdge.next();
+            if (iEdgeN.node1 == iEdgeN.node2) { iEdgeN.delEdge(); }
         }
 
         if (flag == 1) {

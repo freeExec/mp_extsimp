@@ -653,7 +653,7 @@ public class Mp_extsimp {
         }
 
         //rebuild cluster-index from 0
-        buildNodeClusterIndex(0);
+        buildNodeClusterIndex(false);
 
         for (i = 0; i < EdgesNum; i++) {
             Edge edgeI = Edges.get(i);
@@ -779,7 +779,8 @@ public class Mp_extsimp {
                     }*/
                     for(Iterator<Node> jChain = Chain.iterator(); jChain.hasNext();) {
                         for(Iterator<Edge> kEdge = jChain.next().edgeL.iterator(); kEdge.hasNext();) {
-                            if (kEdge.next().mark == 2) { kEdge.next().mark = 1; }
+                            Edge kEdgeN = kEdge.next();
+                            if (kEdgeN.mark == 2) { kEdgeN.mark = 1; }
                     }
                     //*TODO:** goto found: GoTo lSkipDel;
                 }
@@ -1003,7 +1004,8 @@ public class Mp_extsimp {
                     mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
                 }*/
                 for(Iterator<Node> iNode = Chain.iterator(); iNode.hasNext();) {
-                    mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
+                    Node iNodeN = iNode.next();
+                    Node.mergeNodes(iNodeN.mark, iNodeN, 1);
                 }
 
                 //update cluster index to include only newly created nodes (i.e. nodes of joined road)
@@ -1012,8 +1014,8 @@ public class Mp_extsimp {
 //*TODO:** label found: lSkipDel:;
             }
 
-            //'mark edge as checked
-            Edges.get(i).mark = 1;
+            //mark edge as checked
+            edgeI.mark = 1;
 
 //*TODO:** label found: lSkipEdge:;
 
@@ -1023,72 +1025,77 @@ public class Mp_extsimp {
                 System.out.printf("JDS: %1$d / %2$d", i, EdgesNum);
             }
         }
-
-
     }
 
 
-   //Build cluster index
+    //Build cluster index
     //Cluster index allow to quickly find nodes in specific bbox
     //Cluster index is collections of nodes chains, where starts can be selected from coordinates
     //and continuation - by indexes in chains
     //Flags: 1 - only update from ClustersIndexedNodes to NodesNum (0 - full re/build)
-    public static void buildNodeClusterIndex(int flags) {
-        Long, i = null; j As Long, k As Long
+    public static void buildNodeClusterIndex(boolean flags) {
+        int i, j, k;
         int x = 0;
         int y = 0;
 
-        if ((flags && 1) != 0) {
+        if (flags) {
             //Only update
             //TODO(?): remove chain from deleted nodes
-            G.redimPreserve(ClustersChain, NodesNum);
+            //G.redimPreserve(ClustersChain, NodesNum);
+            //TODO: хз, что тут делать, пока
+
             //*TODO:** goto found: GoTo lClustering;
-        }
+        } else {
 
-        //calc overall bbox
-        Bbox wholeBbox = null;
-        wholeBbox..lat_max = -360;
-        wholeBbox..lat_min = 360;
-        wholeBbox..lon_max = -360;
-        wholeBbox..lon_min = 360;
-        for (i = 0; i <= NodesNum - 1; i++) {
-            //'skip deleted nodes
-            if (Nodes.get(i).nodeID != MARK_NODEID_DELETED) {
-                if (Nodes.get(i).lat < wholeBbox..lat_min) { wholeBbox..lat_min = Nodes.get(i).lat; }
-                if (Nodes.get(i).lat > wholeBbox..lat_max) { wholeBbox..lat_max = Nodes.get(i).lat; }
-                if (Nodes.get(i).lon < wholeBbox..lon_min) { wholeBbox..lon_min = Nodes.get(i).lon; }
-                if (Nodes.get(i).lon > wholeBbox..lon_max) { wholeBbox..lon_max = Nodes.get(i).lon; }
+            //calc overall bbox
+            Bbox wholeBbox = new Bbox();
+            wholeBbox.lat_max = -360;
+            wholeBbox.lat_min = 360;
+            wholeBbox.lon_max = -360;
+            wholeBbox.lon_min = 360;
+            //for (i = 0; i <= NodesNum - 1; i++) {
+            for (Iterator<Node> iNode = Nodes.iterator(); iNode.hasNext();) {
+                Node iNodeN = iNode.next();
+                //skip deleted nodes
+                if (iNodeN.nodeID != Mark.MARK_NODEID_DELETED) {
+                    if (iNodeN.lat < wholeBbox.lat_min) { wholeBbox.lat_min = iNodeN.lat; }
+                    if (iNodeN.lat > wholeBbox.lat_max) { wholeBbox.lat_max = iNodeN.lat; }
+                    if (iNodeN.lon < wholeBbox.lon_min) { wholeBbox.lon_min = iNodeN.lon; }
+                    if (iNodeN.lon > wholeBbox.lon_max) { wholeBbox.lon_max = iNodeN.lon; }
+                }
             }
+
+            ClustersIndexedNodes = 0;
+            //no nodes at all or something wrong
+            if (wholeBbox.lat_max < wholeBbox.lat_min || wholeBbox.lon_max < wholeBbox.lon_min) { return; }
+
+            //calc number of clusters
+            ClustersLatNum = (int)(1 + (wholeBbox.lat_max - wholeBbox.lat_min) / CLUSTER_SIZE);
+            ClustersLonNum = (int)(1 + (wholeBbox.lon_max - wholeBbox.lon_min) / CLUSTER_SIZE);
+
+            /*
+            //starts of chains
+            G.redim(ClustersFirst, ClustersLatNum * ClustersLonNum);
+            //ends of chains (for updating)
+            G.redim(ClustersLast, ClustersLatNum * ClustersLonNum);
+            //whole chain
+            G.redim(ClustersChain, NodesNum);
+            */
+            //ClustersChain = new
+
+            //edge of overall bbox
+            ClustersLat0 = wholeBbox.lat_min;
+            ClustersLon0 = wholeBbox.lon_min;
+
+            for (i = 0; i <= ClustersLatNum * ClustersLonNum - 1; i++) {
+                //'no nodes in cluster yet
+                ClustersFirst[i] = -1;
+                ClustersLast[i] = -1;
+            }
+
+            ClustersIndexedNodes = 0;
         }
-
-        ClustersIndexedNodes = 0;
-        //'no nodes at all or something wrong
-        if (wholeBbox..lat_max < wholeBbox..lat_min || wholeBbox..lon_max < wholeBbox..lon_min) { return; }
-
-        //calc number of clusters
-        ClustersLatNum = 1 + (wholeBbox..lat_max - wholeBbox..lat_min) / CLUSTER_SIZE;
-        ClustersLonNum = 1 + (wholeBbox..lon_max - wholeBbox..lon_min) / CLUSTER_SIZE;
-
-        //'starts of chains
-        G.redim(ClustersFirst, ClustersLatNum * ClustersLonNum);
-        //'ends of chains (for updating)
-        G.redim(ClustersLast, ClustersLatNum * ClustersLonNum);
-        //'whole chain
-        G.redim(ClustersChain, NodesNum);
-
-        //'edge of overall bbox
-        ClustersLat0 = wholeBbox..lat_min;
-        ClustersLon0 = wholeBbox..lon_min;
-
-        for (i = 0; i <= ClustersLatNum * ClustersLonNum - 1; i++) {
-            //'no nodes in cluster yet
-            ClustersFirst[i] = -1;
-            ClustersLast[i] = -1;
-        }
-
-        ClustersIndexedNodes = 0;
-
-        //*TODO:** label found: lClustering:;
+//*TODO:** label found: lClustering:;
         for (i = ClustersIndexedNodes; i <= NodesNum - 1; i++) {
             if (Nodes.get(i).nodeID != MARK_NODEID_DELETED) {
                 //get cluster from lat/lon
@@ -1540,7 +1547,7 @@ public class Mp_extsimp {
             //*TODO:** goto found: GoTo lFoundCycle;
         }
 
-        //'proceed to searching next edge
+        //proceed to searching next edge
         //*TODO:** goto found: GoTo lKeepGoing;
 
 //*TODO:** label found: lChainEnds:;
