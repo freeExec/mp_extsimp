@@ -495,8 +495,8 @@ public class Mp_extsimp {
     //Merge loaded nodes from diffrent ways by NodeID
     private static void joinNodesByID() {
         int i, j;
-        int k = 0;
-        int mapNum = 0;
+        int k;
+        int mapNum;
         int[] iDmap;
         int[] nodeMap;
 
@@ -710,8 +710,7 @@ public class Mp_extsimp {
                     if (angl < maxCosine) {
                         //contradirectional edge or close
 
-                        dist1 = Node.distanceBetweenSegments(Nodes.get(Edges.get(i).node1), Nodes.get(Edges.get(i).node2),
-                                Nodes.get(Edges.get(q).node1), Nodes.get(Edges.get(q).node2));
+                        dist1 = Edge.distanceBetweenSegments(edgeI, q);
                         //'found edge close enough
                         if (dist1 < min_dist) {
                             min_dist = dist1;

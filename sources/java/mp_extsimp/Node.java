@@ -75,11 +75,11 @@ public class Node {
     //Calc distance from node3 to interval (not just line) from node1 to node2 in metres
     //Calc by Heron's formula from sides of triangle   (180/-180 safe)
     public static double distanceToSegment(Node node1, Node node2, Node node3) {
-        double _rtn = 0;
-        double a = 0;
-        double b = 0;
-        double c = 0;
-        double s2 = 0;
+        double _rtn;
+        double a;
+        double b;
+        double c;
+        double s2;
 
         //'Calc squares of triangle sides
         a = distanceSquare(node1, node2);
@@ -121,26 +121,11 @@ public class Node {
     public static double distanceSquare(Node node1, Node node2) {
         //double x1, y1, z1;
         //double x2, y2, z2;
-        XYZ first = new XYZ();
-        XYZ second = new XYZ();
+        XYZ first;
+        XYZ second;
         first = XYZ.latLonToXYZ(node1.lat, node1.lon);
         second = XYZ.latLonToXYZ(node2.lat, node2.lon);
         return (first.x - second.x) * (first.x - second.x) + (first.y - second.y) * (first.y - second.y) + (first.z - second.z) * (first.z - second.z);
-    }
-
-    //Calc distance between not crossing edges (edge1 and edge2)
-    //(180/-180 safe)
-    public static double distanceBetweenSegments(Node node1, Node node1a, Node node2, Node node2a) {
-        double d1, d2;
-        //Just minimum of 4 distances (each ends to each other edge)
-        d1 = distanceToSegment(node1, node1a, node2);
-        d2 = distanceToSegment(node1, node1a, node2a);
-        if (d2 < d1) { d1 = d2; }
-        d2 = distanceToSegment(node2, node2a, node1);
-        if (d2 < d1) { d1 = d2; }
-        d2 = distanceToSegment(node1, node2a, node1a);
-        if (d2 < d1) { d1 = d2; }
-        return d1;
     }
 
     //Calc distance from node1 to node2 in metres

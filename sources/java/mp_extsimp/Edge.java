@@ -141,5 +141,21 @@ public class Edge {
         }
 
         return _rtn;
-    }    
+    }
+    
+    //Calc distance between not crossing edges (edge1 and edge2)
+    //(180/-180 safe)
+    public static double distanceBetweenSegments(Edge edge1, Edge edge2) {
+        double d1, d2;
+        
+        //Just minimum of 4 distances (each ends to each other edge)
+        d1 = Node.distanceToSegment(edge1.node1, edge1.node2, edge2.node1);
+        d2 = Node.distanceToSegment(edge1.node1, edge1.node2, edge2.node2);
+        if (d2 < d1) { d1 = d2; }
+        d2 = Node.distanceToSegment(edge2.node1, edge2.node2, edge1.node1);
+        if (d2 < d1) { d1 = d2; }
+        d2 = Node.distanceToSegment(edge1.node1, edge2.node2, edge1.node2);
+        if (d2 < d1) { d1 = d2; }
+        return d1;
+    }
 }
