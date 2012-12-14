@@ -597,11 +597,11 @@ public class Mp_extsimp {
         Edge q;
         double dist1, dist2;
         Bbox bbox_edge;
-        double angl = 0;
+        double angl;
         double min_dist;
-        int min_dist_edge;
-        int roadtype = 0;
-        int speednew = 0;
+        Edge min_dist_edge;
+        int roadtype;
+        int speednew;
 
         //chain of forward edges
         //int[] edgesForw;
@@ -625,7 +625,7 @@ public class Mp_extsimp {
         //mark all nodes as not checked
         for (i = 0; i <= NodesNum - 1; i++) {
             //not moved
-            Nodes.get(i).mark = -1;
+            Nodes.get(i).mark = null;
         }
         int EdgesNum = Edges.size();
         for (i = 0; i < EdgesNum; i++) {
@@ -666,7 +666,7 @@ public class Mp_extsimp {
             //'expand it
             Bbox.expandBbox(bbox_edge, joinDistance);
             min_dist = joinDistance;
-            min_dist_edge = -1;
+            min_dist_edge = null;
 
             //first
             mode1 = false;
@@ -726,7 +726,7 @@ public class Mp_extsimp {
 //*TODO:** label found: lAllNodes:;
             //all nodes in bbox check
 
-            if (min_dist_edge > -1) {
+            if (min_dist_edge != null) {
                 //found edge close enough
                 //now - trace two ways in both directions
                 //in the process we will fill Chain array with all nodes of joining ways
@@ -734,14 +734,14 @@ public class Mp_extsimp {
                 //index of new node, where old node should join, will in .mark field of old nodes
                 //also will be created two lists of deleting edges separated to two directions - arrays TWforw and TWback
 
-                roadtype = Edges.get(i).roadtype;
+                roadtype = edgeI.roadtype;
                 loopChain = 0;
                 //ChainNum = 0;
                 //TWforwNum = 0;
                 //TWbackNum = 0;
 
                 //first pass, in direction of edge i
-                goByTwoWays(i, min_dist_edge, joinDistance, combineDistance, maxCosine2, 0);
+                goByTwoWays(edgeI, min_dist_edge, joinDistance, combineDistance, maxCosine2, 0);
 
                 //reverse of TWforw and TWback removed, as order of edges have no major effect
 
@@ -749,7 +749,7 @@ public class Mp_extsimp {
                 //reverseArray(Chain, ChainNum);
 
                 //second pass, in direction of min_dist_edge
-                goByTwoWays(min_dist_edge, i, joinDistance, combineDistance, maxCosine2, 1);
+                goByTwoWays(min_dist_edge, edgeI, joinDistance, combineDistance, maxCosine2, 1);
 
                 //first and last nodes coincide - this is loop road
                 if (Chain.get(0).equals(Chain.get(Chain.size() - 1))) { loopChain = 1; }
@@ -764,17 +764,21 @@ public class Mp_extsimp {
                 dist1 = 0;
                 for (j = 1; j < Chain.size(); j++) {
                     // TODO: марк вроде бы как маркер, а тут как индекс ?
-                    dist1 += Node.distance(Nodes.get(Chain.get(j - 1).mark), Nodes.get(Chain.get(j).mark));
+                    dist1 += Node.distance(Chain.get(j - 1).mark, Chain.get(j).mark);
                 }
 
                 if (dist1 < minChainLen) {
                     //road is too short -> unmark all edges and not delete anything
-                    for (j = 0; j < Chain.size(); j++) {
-                        for (clusterNode = 0; clusterNode <= Chain.get(j).Edges - 1; clusterNode++) {
+                    /*for (j = 0; j < Chain.size(); j++) {
+                        for (clusterNode = 0; clusterNode < Chain.get(j).edgeL.size(); clusterNode++) {
                             if (Edges.get(Chain.get(j).edgeL[clusterNode]).mark == 2) {
                                 Edges.get(Chain.get(j).edgeL[clusterNode]).mark = 1;
                             }
                         }
+                    }*/
+                    for(Iterator<Node> jChain = Chain.iterator(); jChain.hasNext();) {
+                        for(Iterator<Edge> kEdge = jChain.next().edgeL.iterator(); kEdge.hasNext();) {
+                            if (kEdge.next().mark == 2) { kEdge.next().mark = 1; }
                     }
                     //*TODO:** goto found: GoTo lSkipDel;
                 }

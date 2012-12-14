@@ -36,7 +36,7 @@ public class Node {
     public int nodeID;     //NodeID from source .mp, -1 - not set, -2 - node killed
     public ArrayList<Edge> edgeL;   //all edges (values - indexes in Edges array)
     //public int Edges;      //number of edges, -1 means "not counted"
-    public int mark;       //internal marker for all-network algo-s
+    public Node mark;       //internal marker for all-network algo-s
     public double temp_dist;//internal value for for all-network algo-s
     
     public Node() {
