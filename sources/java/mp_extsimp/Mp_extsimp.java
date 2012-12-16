@@ -1604,13 +1604,13 @@ public class Mp_extsimp {
 
 //*TODO:** label found: lExit:;
     }
-
+/*
     //Reverse array into backward direction
     public static void reverseArray(int[] arr, int num) { // TODO: Use of ByRef founded
         int i = 0;
         int j = 0;
         int t = 0;
-        //'half of len
+        //half of len
         j = num / 2;
         for (i = 0; i <= j - 1; i++) {
             //swap elements from first and second halfs
@@ -1619,19 +1619,19 @@ public class Mp_extsimp {
             arr[num - 1 - i] = t;
         }
     }
-
+*/
     //Add edge into one of TW arrays
     //side: 0 - into TWforw, 1 - into TWback
     public static void addTW(Edge edge1, int side) {
         if (side == 1) {
-            TWback.add(Edges.indexOf(edge1));
+            TWback.add(edge1);
             /*TWback[TWbackNum] = edge1;
             TWbackNum = TWbackNum + 1;
             if (TWbackNum >= TWalloc) {
                 //*TODO:** goto found: GoTo lRealloc;
             }*/
         } else {
-            TWforw.add(Edges.indexOf(edge1));
+            TWforw.add(edge1);
             /*TWforw[TWforwNum] = edge1;
             TWforwNum = TWforwNum + 1;
             if (TWforwNum >= TWalloc) {
@@ -1655,4 +1655,48 @@ public class Mp_extsimp {
         return -1;
     }
     */
+
+    //Fix order of nodes in Chain
+    //Fixing is needed when last node is not new arrow-head of GoByTwoWays algorithm (ex. several short edges of one side, but long edge of other side)
+    public static void fixChainOrder(int checkindex) {
+
+        Node i2, i1, i0;
+        int k;
+        double p;
+        //2 or less nodes in chain, nothing to fix
+        if (checkindex < 2) { return; }
+
+        //last new node
+        i2 = Chain.get(checkindex).mark;
+        //exit in case of probles
+        if (i2 == null) { return; }
+        //prev new node
+        i1 = Chain.get(checkindex - 1).mark;
+        if (i1 == null) { return; }
+        //'prev-prev new node
+        i0 = Chain.get(checkindex - 2).mark;
+        if (i0 == null) { return; }
+
+        k = 3;
+        //if prev-prev new nodes is combined with prev new node - find diffent node backward
+        while (i0.equals(i1)) {
+            //reach Chain(0)
+            if (checkindex < k) { return; }
+            i0 = Chain.get(checkindex - k).mark;
+            k = k + 1;
+        }
+
+        //Scalar multiplication of vectors i0->i1 and i1->i2
+        p = (i2.lat - i1.lat) * (i1.lat - i0.lat) + (i2.lon - i1.lon) * (i1.lon - i0.lon);
+
+        if (p < 0) {
+            //vectors are contradirectional -> swap
+            i0 = Chain[checkindex];
+            Chain[checkindex] = Chain[checkindex - 1];
+            Chain[checkindex - 1] == i0;
+            //check last new node on new place
+            fixChainOrder(checkindex - 1);
+        }
+    }
+
 }
