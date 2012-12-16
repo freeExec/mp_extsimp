@@ -48,9 +48,9 @@ public class Mp_extsimp {
     private static int AimEdgesNum = 0;    
     
     //Label statistics, for estimate labels of joined roads
-    private static LabelStat[] LabelStats;
-    private static int LabelStatsNum = 0;
-    private static int LabelStatsAlloc = 0;
+    private static ArrayList<LabelStat> LabelStats;
+    //private static int LabelStatsNum = 0;
+    //private static int LabelStatsAlloc = 0;
 
     //Indexes of forward and backward ways during two ways joining
     private static ArrayList<Edge> TWforw;
@@ -150,9 +150,7 @@ public class Mp_extsimp {
         AimEdges = new aimedge[AimEdgesAlloc];
         AimEdgesNum = 0;
 
-        LabelStatsAlloc = 30;
-        LabelStats = new LabelStat[LabelStatsAlloc];
-        LabelStatsNum = 0;
+        LabelStats = new ArrayList<LabelStat>;
 
         /*TWalloc = 100;
         TWforw = new int[TWalloc];
@@ -1010,7 +1008,7 @@ public class Mp_extsimp {
                 }
 
                 //update cluster index to include only newly created nodes (i.e. nodes of joined road)
-                buildNodeClusterIndex(1);
+                buildNodeClusterIndex(true);
 
 //*TODO:** label found: lSkipDel:;
             }
@@ -1691,12 +1689,25 @@ public class Mp_extsimp {
 
         if (p < 0) {
             //vectors are contradirectional -> swap
-            i0 = Chain[checkindex];
-            Chain[checkindex] = Chain[checkindex - 1];
-            Chain[checkindex - 1] == i0;
+            i0 = Chain.get(checkindex);
+            Chain.set(checkindex, Chain.get(checkindex - 1));
+            Chain.set(checkindex - 1, i0);
             //check last new node on new place
             fixChainOrder(checkindex - 1);
         }
     }
 
+    public static String getLabelByStats(int flags) {
+        //GetLabelByStats = GetLabelByStats1(Text) majoritary version
+        //combinatory version
+        // TODO: флаг пока не использовался
+        return LabelStat.getLabelByStats2(LabelStats);
+    }
+
+    //Add label to label stats
+    public static void addLabelStat0(String text) {
+        //Call AddLabelStat1(Text) majoritary version
+        //combinatory version
+        LabelStat.addLabelStat2(text, LabelStats);
+    }
 }
