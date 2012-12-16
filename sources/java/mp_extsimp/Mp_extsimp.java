@@ -150,7 +150,7 @@ public class Mp_extsimp {
         AimEdges = new aimedge[AimEdgesAlloc];
         AimEdgesNum = 0;
 
-        LabelStats = new ArrayList<LabelStat>;
+        LabelStats = new ArrayList<LabelStat>();
 
         /*TWalloc = 100;
         TWforw = new int[TWalloc];
@@ -740,7 +740,7 @@ public class Mp_extsimp {
                 //TWbackNum = 0;
 
                 //first pass, in direction of edge i
-                goByTwoWays(edgeI, min_dist_edge, joinDistance, combineDistance, maxCosine2, 0);
+                goByTwoWays(edgeI, min_dist_edge, joinDistance, combineDistance, maxCosine2, false);
 
                 //reverse of TWforw and TWback removed, as order of edges have no major effect
 
@@ -748,7 +748,7 @@ public class Mp_extsimp {
                 //reverseArray(Chain, ChainNum);
 
                 //second pass, in direction of min_dist_edge
-                goByTwoWays(min_dist_edge, edgeI, joinDistance, combineDistance, maxCosine2, 1);
+                goByTwoWays(min_dist_edge, edgeI, joinDistance, combineDistance, maxCosine2, true);
 
                 //first and last nodes coincide - this is loop road
                 if (Chain.get(0).equals(Chain.get(Chain.size() - 1))) { loopChain = 1; }
@@ -1709,5 +1709,10 @@ public class Mp_extsimp {
         //Call AddLabelStat1(Text) majoritary version
         //combinatory version
         LabelStat.addLabelStat2(text, LabelStats);
+    }
+
+    //Remove all labels stats from memory
+    public static void resetLabelStats() {
+        LabelStats.clear();
     }
 }
