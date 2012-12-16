@@ -1359,244 +1359,250 @@ public class Mp_extsimp {
         }
 
 //*TODO:** label found: lKeepGoing:;
+        while (true) {
 
-        angl_min = maxCosine2; angl_min_edge = null;
+            angl_min = maxCosine2; angl_min_edge = null;
 
-        if (Chain.get(Chain.size()) == side1j) {
-            //side1 is leading, side2 should be prolonged
-            calc_side = 2;
-        }
-        else {
-            //side2 is leading, side1 should be prolonged
-            calc_side = 1;
-        }
-
-        if (calc_side == 2) {
-            //search edge from side2j which is most opposite to edge_side1
-            for (Iterator<Edge> iEdge = side2j.edgeL.iterator(); iEdge.hasNext();) {
-            //for (i = 0; i < side2j.Edges - 1; i++) {
-                Edge jEdge = iEdge.next();//Nodes.get(side2j).edgeL[i];
-                // TODO: возможно что-то не так, было j == edge_side2 (индексы)
-                if (jEdge.equals(edge_side2)  || jEdge.node1 == null || jEdge.oneway == 0
-                        || jEdge.roadtype != roadtype  || jEdge.node2 != side2j) {
-            //*TODO:** goto found: GoTo lSkipEdgeSide2;
-                    continue;
-                }
-                //skip same edge_side2, deleted, 2-ways, other road types and directed from this node outside
-                //dist_t = distanceBetweenSegments(j, edge_side1);
-                dist_t = Edge.distanceBetweenSegments(jEdge, edge_side1);
-                //skip too far edges
-                if (dist_t > joinDistance) { 
-            //*TODO:** goto found: GoTo lSkipEdgeSide2;
-                    continue;
-                }
-                //angl = cosAngleBetweenEdges(j, edge_side1);
-                angl = Edge.cosAngleBetweenEdges(jEdge, edge_side1);
-                //remember edge with min angle
-                if (angl < angl_min) { angl_min = angl; angl_min_edge = jEdge; }
-//*TODO:** label found: lSkipEdgeSide2:;
-            }
-
-            //mark edge as participating in joining
-            edge_side2.mark = 2;
-            //add edge to chain (depending on pass number)
-            addTW(edge_side2, passNumber);
-
-            if (angl_min_edge == null) {
-                //no edge found - end of chain
-                //mark last edge of side1
-                edge_side1.mark = 2;
-                //and add it to chain
-                addTW(edge_side1, 1 - passNumber);
-        //*TODO:** goto found: GoTo lChainEnds;
-            }
-
-            edge_side2 = angl_min_edge;
-            //update i and j nodes of side
-            side2i = side2j;
-            side2j = edge_side2.node1;
-
-            if (edge_side2.mark == 2) {
-                //found marked edge, this means that we found cycle
-                side2circled = 1;
-            }
-
-            if (side2j == side1j) {
-                //found joining of two directions, should end chain
-                //mark both last edges as participating in joining
-                edge_side2.mark = 2;
-                edge_side1.mark = 2;
-                //add them to chains
-                addTW(edge_side2, passNumber);
-                addTW(edge_side1, 1 - passNumber);
-        //*TODO:** goto found: GoTo lChainEnds;
-            }
-
-        }
-        else {
-            //search edge from side1j which is most opposite to edge_side2
-            for (Iterator<Edge> iEdge = side1j.edgeL.iterator(); iEdge.hasNext();) {
-            //for (i = 0; i <= Nodes.get(side1j).Edges - 1; i++) {
-                //Edge jEdge = iEdge.next();  //Nodes.get(side1j).edgeL[i];
-                Edge edgeJ = iEdge.next();  //Edges.get(j);
-                if (edgeJ.equals(edge_side1) || edgeJ.oneway == 0 || edgeJ.roadtype != roadtype  || edgeJ.node1 != side1j) {
-            //*TODO:** goto found: GoTo lSkipEdgeSide1;
-                }
-                //skip same edge_side1, 2-ways, other road types and directed from this node outside
-                dist_t = Edge.distanceBetweenSegments(edgeJ, edge_side2);
-                //skip too far edges
-                if (dist_t > joinDistance) { 
-            //*TODO:** goto found: GoTo lSkipEdgeSide1;
-                }
-                angl = Edge.cosAngleBetweenEdges(edgeJ, edge_side2);
-                //remember edge with min angle
-                if (angl < angl_min) { angl_min = angl; angl_min_edge = edgeJ; }
-            //*TODO:** label found: lSkipEdgeSide1:;
-            }
-
-            //mark edge as participating in joining
-            edge_side1.mark = 2;
-            //add edge to chain (depending on pass number)
-            addTW(edge_side1, 1 - passNumber);
-
-            if (angl_min_edge == null) {
-                //no edge found - end of chain
-                //mark last edge of side2
-                edge_side2.mark = 2;
-                //and add it to chain
-                addTW(edge_side2, passNumber);
-            //*TODO:** goto found: GoTo lChainEnds;
-            }
-
-            edge_side1 = angl_min_edge;
-            //update i and j nodes of side
-            side1i = side1j;
-            side1j = edge_side1.node2;
-
-            if (edge_side1.mark == 2) {
-                //found marked edge, means, that we found cycle
-                side1circled = 1;
-            }
-
-            if (side2j == side1j) {
-                //found marked edge, this means that we found cycle
-                //mark both last edges as participating in joining
-                edge_side2.mark = 2;
-                edge_side1.mark = 2;
-                //'add them to chains
-                addTW(edge_side2, passNumber);
-                addTW(edge_side1, 1 - passNumber);
-        //*TODO:** goto found: GoTo lChainEnds;
-            }
-        }
-
-        //middle line projection vector
-        //TODO: fix (not safe to 180/-180 edge)
-        dx = side1j.lat - side1i.lat + side2j.lat - side2i.lat;
-        dy = side1j.lon - side1i.lon + side2j.lon - side2i.lon;
-        px = side1i.lat + side2i.lat * 0.5;
-        py = side1i.lon + side2i.lon * 0.5;
-        dd = 1 / (dx * dx + dy * dy);
-
-        //remember current chain len
-        checkchain = Chain.size();
-
-        if (calc_side == 2) {
-            //project j node from side2 to middle line
-            dist_t = (side2j.lat - px) * dx + (side2j.lon - py) * dy;
-            //addChain(side2j);
-            Chain.add(side2j);
-            //old node will collapse to this new one
-            side2j.mark = Nodes.get(Nodes.size());
-        }
-        else {
-            //project j node from side1 to middle line
-            dist_t = (side1j.lat - px) * dx + (side1j.lon - py) * dy;
-            Chain.add(side1j);
-            //'old node will collapse to this new one
-            side1j.mark = Nodes.get(Nodes.size());
-        }
-
-        //create new node
-        Node createNode = new Node(-1);
-        /*Nodes[NodesNum].Edges = 0;
-        Nodes[NodesNum]..nodeID = -1;
-        Nodes[NodesNum]..mark = -1;
-        Nodes[NodesNum]..lat = px + dist_t * dx * dd;
-        Nodes[NodesNum]..lon = py + dist_t * dy * dd;
-        */
-        createNode.lat = px + dist_t * dx * dd;
-        createNode.lon = py + dist_t * dy * dd;
-        
-        //reproject prev node into current middle line ("ChainNum - 2" because ChainNum were updated above by AddChain)
-        //j = Nodes[Chain[ChainNum - 2]]..mark;
-        Node jNode = Chain.get(Chain.size() - 2);
-        dist_t = (jNode.lat - px) * dx + (jNode.lon - py) * dy;
-        jNode.lat = px + dist_t * dx * dd;
-        jNode.lon = py + dist_t * dy * dd;
-
-        if (Node.distance(jNode, Nodes.get(Nodes.size())) < combineDistance) {
-            //Distance from new node to prev-one is too small, collapse node with prev-one
-            //TODO(?): averaging coordinates?
-            if (calc_side == 2) {
-                side2j.mark = jNode;
+            if (Chain.get(Chain.size()) == side1j) {
+                //side1 is leading, side2 should be prolonged
+                calc_side = 2;
             }
             else {
-                side1j.mark = jNode;
+                //side2 is leading, side1 should be prolonged
+                calc_side = 1;
             }
-            //do not call AddNode -> new node will die
-        }
-        else {
-            //addNode();
-            Nodes.add(createNode);
-            //fix order of nodes in chain
-            fixChainOrder(checkchain);
-        }
 
-        //both sides circled - whole road is a loop
-        if (side1circled > 0 && side2circled > 0) { 
-    //*TODO:** goto found: GoTo lFoundCycle;
-        }
+            if (calc_side == 2) {
+                //search edge from side2j which is most opposite to edge_side1
+                for (Iterator<Edge> iEdge = side2j.edgeL.iterator(); iEdge.hasNext();) {
+                //for (i = 0; i < side2j.Edges - 1; i++) {
+                    Edge jEdge = iEdge.next();//Nodes.get(side2j).edgeL[i];
+                    // TODO: возможно что-то не так, было j == edge_side2 (индексы)
+                    if (jEdge.equals(edge_side2)  || jEdge.node1 == null || jEdge.oneway == 0
+                            || jEdge.roadtype != roadtype  || jEdge.node2 != side2j) {
+                //*TODO:** goto found: GoTo lSkipEdgeSide2;
+                        continue;
+                    }
+                    //skip same edge_side2, deleted, 2-ways, other road types and directed from this node outside
+                    //dist_t = distanceBetweenSegments(j, edge_side1);
+                    dist_t = Edge.distanceBetweenSegments(jEdge, edge_side1);
+                    //skip too far edges
+                    if (dist_t > joinDistance) {
+                //*TODO:** goto found: GoTo lSkipEdgeSide2;
+                        continue;
+                    }
+                    //angl = cosAngleBetweenEdges(j, edge_side1);
+                    angl = Edge.cosAngleBetweenEdges(jEdge, edge_side1);
+                    //remember edge with min angle
+                    if (angl < angl_min) { angl_min = angl; angl_min_edge = jEdge; }
+    //*TODO:** label found: lSkipEdgeSide2:;
+                }
 
-        //proceed to searching next edge
-    //*TODO:** goto found: GoTo lKeepGoing;
+                //mark edge as participating in joining
+                edge_side2.mark = 2;
+                //add edge to chain (depending on pass number)
+                addTW(edge_side2, passNumber);
+
+                if (angl_min_edge == null) {
+                    //no edge found - end of chain
+                    //mark last edge of side1
+                    edge_side1.mark = 2;
+                    //and add it to chain
+                    addTW(edge_side1, 1 - passNumber);
+            //*TODO:** goto found: GoTo lChainEnds;
+                    break;
+                }
+
+                edge_side2 = angl_min_edge;
+                //update i and j nodes of side
+                side2i = side2j;
+                side2j = edge_side2.node1;
+
+                if (edge_side2.mark == 2) {
+                    //found marked edge, this means that we found cycle
+                    side2circled = 1;
+                }
+
+                if (side2j == side1j) {
+                    //found joining of two directions, should end chain
+                    //mark both last edges as participating in joining
+                    edge_side2.mark = 2;
+                    edge_side1.mark = 2;
+                    //add them to chains
+                    addTW(edge_side2, passNumber);
+                    addTW(edge_side1, 1 - passNumber);
+            //*TODO:** goto found: GoTo lChainEnds;
+                    break;
+                }
+
+            }
+            else {
+                //search edge from side1j which is most opposite to edge_side2
+                for (Iterator<Edge> iEdge = side1j.edgeL.iterator(); iEdge.hasNext();) {
+                //for (i = 0; i <= Nodes.get(side1j).Edges - 1; i++) {
+                    //Edge jEdge = iEdge.next();  //Nodes.get(side1j).edgeL[i];
+                    Edge edgeJ = iEdge.next();  //Edges.get(j);
+                    if (edgeJ.equals(edge_side1) || edgeJ.oneway == 0 || edgeJ.roadtype != roadtype  || edgeJ.node1 != side1j) {
+                //*TODO:** goto found: GoTo lSkipEdgeSide1;
+                        continue;
+                    }
+                    //skip same edge_side1, 2-ways, other road types and directed from this node outside
+                    dist_t = Edge.distanceBetweenSegments(edgeJ, edge_side2);
+                    //skip too far edges
+                    if (dist_t > joinDistance) {
+                //*TODO:** goto found: GoTo lSkipEdgeSide1;
+                        continue;
+                    }
+                    angl = Edge.cosAngleBetweenEdges(edgeJ, edge_side2);
+                    //remember edge with min angle
+                    if (angl < angl_min) { angl_min = angl; angl_min_edge = edgeJ; }
+                //*TODO:** label found: lSkipEdgeSide1:;
+                }
+
+                //mark edge as participating in joining
+                edge_side1.mark = 2;
+                //add edge to chain (depending on pass number)
+                addTW(edge_side1, 1 - passNumber);
+
+                if (angl_min_edge == null) {
+                    //no edge found - end of chain
+                    //mark last edge of side2
+                    edge_side2.mark = 2;
+                    //and add it to chain
+                    addTW(edge_side2, passNumber);
+                //*TODO:** goto found: GoTo lChainEnds;
+                    break;
+                }
+
+                edge_side1 = angl_min_edge;
+                //update i and j nodes of side
+                side1i = side1j;
+                side1j = edge_side1.node2;
+
+                if (edge_side1.mark == 2) {
+                    //found marked edge, means, that we found cycle
+                    side1circled = 1;
+                }
+
+                if (side2j == side1j) {
+                    //found marked edge, this means that we found cycle
+                    //mark both last edges as participating in joining
+                    edge_side2.mark = 2;
+                    edge_side1.mark = 2;
+                    //'add them to chains
+                    addTW(edge_side2, passNumber);
+                    addTW(edge_side1, 1 - passNumber);
+            //*TODO:** goto found: GoTo lChainEnds;
+                    break;
+                }
+            }
+
+            //middle line projection vector
+            //TODO: fix (not safe to 180/-180 edge)
+            dx = side1j.lat - side1i.lat + side2j.lat - side2i.lat;
+            dy = side1j.lon - side1i.lon + side2j.lon - side2i.lon;
+            px = side1i.lat + side2i.lat * 0.5;
+            py = side1i.lon + side2i.lon * 0.5;
+            dd = 1 / (dx * dx + dy * dy);
+
+            //remember current chain len
+            checkchain = Chain.size();
+
+            if (calc_side == 2) {
+                //project j node from side2 to middle line
+                dist_t = (side2j.lat - px) * dx + (side2j.lon - py) * dy;
+                //addChain(side2j);
+                Chain.add(side2j);
+                //old node will collapse to this new one
+                side2j.mark = Nodes.get(Nodes.size());
+            }
+            else {
+                //project j node from side1 to middle line
+                dist_t = (side1j.lat - px) * dx + (side1j.lon - py) * dy;
+                Chain.add(side1j);
+                //'old node will collapse to this new one
+                side1j.mark = Nodes.get(Nodes.size());
+            }
+
+            //create new node
+            Node createNode = new Node(-1);
+            /*Nodes[NodesNum].Edges = 0;
+            Nodes[NodesNum]..nodeID = -1;
+            Nodes[NodesNum]..mark = -1;
+            Nodes[NodesNum]..lat = px + dist_t * dx * dd;
+            Nodes[NodesNum]..lon = py + dist_t * dy * dd;
+            */
+            createNode.lat = px + dist_t * dx * dd;
+            createNode.lon = py + dist_t * dy * dd;
+
+            //reproject prev node into current middle line ("ChainNum - 2" because ChainNum were updated above by AddChain)
+            //j = Nodes[Chain[ChainNum - 2]]..mark;
+            Node jNode = Chain.get(Chain.size() - 2);
+            dist_t = (jNode.lat - px) * dx + (jNode.lon - py) * dy;
+            jNode.lat = px + dist_t * dx * dd;
+            jNode.lon = py + dist_t * dy * dd;
+
+            if (Node.distance(jNode, Nodes.get(Nodes.size())) < combineDistance) {
+                //Distance from new node to prev-one is too small, collapse node with prev-one
+                //TODO(?): averaging coordinates?
+                if (calc_side == 2) {
+                    side2j.mark = jNode;
+                }
+                else {
+                    side1j.mark = jNode;
+                }
+                //do not call AddNode -> new node will die
+            }
+            else {
+                //addNode();
+                Nodes.add(createNode);
+                //fix order of nodes in chain
+                fixChainOrder(checkchain);
+            }
+
+            //both sides circled - whole road is a loop
+            if (side1circled > 0 && side2circled > 0) {
+        //*TODO:** goto found: GoTo lFoundCycle;
+
+//*TODO:** label found: lFoundCycle:;
+                //handle cycle road
+
+                //find all nodes from end of chain which is present in chain two times
+                //remove all of them, except last one
+                //in good cases last node should be same as first node
+                //TODO: what if not?
+                //for (int i = Chain.size(); i >= 0; i--) {
+                int i = Chain.size();
+                while(true) {
+                    Node iChain = Chain.get(i);
+                    for (int j = 0; j <= i - 1; j++) {
+                        if (iChain.equals(Chain.get(j))) {
+            //*TODO:** goto found: GoTo lFound;
+                            i--;
+                            Chain.remove(iChain);
+                            break;
+                        }
+                    }
+                    //not found
+                    //keep this node (which is one time in chain) and next one (which is two times)
+                    // TODO: не понятка как это толком энтерпретировать. Переделал два фора, в один фор и ваил, где регулирование индекса идет в форе
+                    //ChainNum = i + 2;
+                    break;
+                    //*TODO:** goto found: GoTo lExit;
+        //*TODO:** label found: lFound:;
+                }
+            }
+
+            //proceed to searching next edge
+        //*TODO:** goto found: GoTo lKeepGoing;
+        }
 
 //*TODO:** label found: lChainEnds:;
 
         //Node there is chance, that circular way will be not closed from one of sides
         //Algorithm does not handle this case, it should collapse during juctions collapsing
 
-        return;
-
-//*TODO:** label found: lFoundCycle:;
-        //handle cycle road
-
-        //find all nodes from end of chain which is present in chain two times
-        //remove all of them, except last one
-        //in good cases last node should be same as first node
-        //TODO: what if not?
-        //for (int i = Chain.size(); i >= 0; i--) {
-        int i = Chain.size();
-        while(true) {
-            Node iChain = Chain.get(i);
-            for (int j = 0; j <= i - 1; j++) {
-                if (iChain.equals(Chain.get(j))) {
-    //*TODO:** goto found: GoTo lFound;
-                    i--;
-                    Chain.remove(iChain);
-                    break;
-                }
-            }
-            //not found
-            //keep this node (which is one time in chain) and next one (which is two times)
-            ChainNum = i + 2;
-            break;
-            //*TODO:** goto found: GoTo lExit;
-//*TODO:** label found: lFound:;
-        }
-
 //*TODO:** label found: lExit:;
-
     }
 
     //Reverse array into backward direction
