@@ -34,9 +34,9 @@ public class Highway {
     public static final int HIGHWAY_UNSPECIFIED = 24;
 
     //Masks
-    //'all links
+    //all links
     public static final int HIGHWAY_MASK_LINK = 1;
-    //'get main type (removes _link)
+    //get main type (removes _link)
     public static final int HIGHWAY_MASK_MAIN = 254;
 
     

@@ -55,7 +55,6 @@ public class Node {
     public void addEdge(Edge edgeIn) {
         this.edgeL.add(edgeIn);
     }
-        
     
     private void Init() {
         this.edgeL = new ArrayList<Edge>();//new int[20];

@@ -172,8 +172,8 @@ public class Mp_extsimp {
         //'0 - none, 1 - header, 2 - polyline, 3 - polygon
         int sectionType = 0;
         //'Phase of reading polyline: 0 - general part, 1 - scan for routeparam, 2 - scan for geometry, 3 - scan for routing (nodeid e.t.c)
-        int iPhase = 0;
-        long iStartLine = 0;
+        //int iPhase = 0;
+        //long iStartLine = 0;
         long iPrevLine = 0;
         long fileLen = 0;
         int lastPercent = 0;
@@ -209,12 +209,17 @@ public class Mp_extsimp {
             sectionType = 0;
             wayClass = -1;
             waySpeed = -1;
-            iPhase = 0;
+            //iPhase = 0;
             label = "";
             //iStartLine = 0;
             iPrevLine = 0;
             MPheader = "";
             lastCommentHighway = Highway.HIGHWAY_UNSPECIFIED;
+            
+            // для однопроходной загрузки
+            Node addedNode;// = new Node(-1);
+            ArrayList<Node> addedNodes = new ArrayList<Node>();
+            ArrayList<Edge> addedEdges = new ArrayList<Edge>();
 
             while(br.ready()) {
     //*TODO:** label found: lNextLine:;
@@ -229,7 +234,7 @@ public class Mp_extsimp {
                 if (sLine.startsWith("[IMG ID]")) {
                     //header section
                     sectionType = 1;
-                    iPhase = 0;
+                    //iPhase = 0;
                 }
                 if (sLine.startsWith("[POLYGON]")) {
                     //polygon
@@ -241,7 +246,7 @@ public class Mp_extsimp {
                     sectionType = 2;
                 }
     //*TODO:** label found: lStartPoly:;
-                if (sectionType == 3 || sectionType == 2) {
+                if (sLine.startsWith("[POLY") && (sectionType == 3 || sectionType == 2)) {
                     if ((iPrevLine / 1023) > lastPercent) {
                         //display progress
                         //Form1.Caption = "Load: " + CStr(iPrevLine) + " / " + CStr(fileLen): Form1.Refresh;
@@ -249,16 +254,18 @@ public class Mp_extsimp {
                         System.out.printf("Load: (%3$d%%) %1$d / %2$d\n", iPrevLine, fileLen, lastPercent);
                     }
                     dataLineNum = 0;
-                    if (iPhase == 0) {
+                    //if (iPhase == 0) {
                         //first pass of section? start scanning
                         wayClass = -1;
                         waySpeed = -1;
-                        iPhase = 1;
+                        //iPhase = 1;
                         //remember current pos (where to go after ending pass)
-                        iStartLine = iPrevLine - originalLenLine;
-                        br.mark(40*1024);   // резерв буфера на 40 КБ
+                        //iStartLine = iPrevLine - originalLenLine;
+                        //br.mark(40*1024);   // резерв буфера на 40 КБ
                         //System.out.printf("Mark: %1$d / %2$d\n", iPrevLine , originalLenLine);
-                    }
+                    //}
+                    // Инициализирую объект свойства которого буду заполнять
+                    //addedNode = new Node(-1);
                 }
 
                 if (sLine.startsWith("[END")) {
@@ -268,33 +275,41 @@ public class Mp_extsimp {
                         //add ending of section into saved header
                         MPheader = MPheader + sLine + "\n";
                     }
-
-                    //no routing params found in 1st pass - skip way completely
-                    if (iPhase == 1  && (waySpeed == -1)) { iPhase = 0; }
-
-                    if (iPhase > 0 && iPhase < 3) {
+                    if (waySpeed != -1 && addedNodes.size() > 0 && addedEdges.size() > 0) {
+                            Nodes.addAll(addedNodes);
+                            Edges.addAll(addedEdges);
+                    }
+                    //if (iPhase > 0 && iPhase < 3) {
                         //not last pass of section -> goto start of it
                         //relocate in file
 
                         //Seek(1, iStartLine);
                         //fis.getChannel().position(iStartLine);
                         //System.out.printf("Reset: %1$d / %2$d\n", iPrevLine , originalLenLine);
-                        iPrevLine = iStartLine;
-                        br.reset();
-                        iPhase = iPhase + 1;
-    //*TODO:** goto found: GoTo lNextLine;
-                        continue;
-                    }
+                        //iPrevLine = iStartLine;
+                        //br.reset();
+                        //iPhase = iPhase + 1;
+
+                        addedNodes.clear();
+                        addedEdges.clear();                        
+                    //}
+                    //no routing params found in 1st pass - skip way completely
+                    //if (iPhase == 1  && (waySpeed == -1)) { 
+                    //    iPhase = 0;
+                    //}
+
 
                     //if no osm2mp info yet found
                     lastCommentHighway = Highway.HIGHWAY_UNSPECIFIED;
                     label = "";
-                    iPhase = 0;
+                    //iPhase = 0;
                     sectionType = 0;
+    //*TODO:** goto found: GoTo lNextLine;
+                    continue;
                 }
 
-                switch (iPhase) {
-                    case  0:
+                //switch (iPhase) {
+                //    case  0:
                         if (sLine.startsWith("; highway")) {
                             //comment, produced by osm2mp
                             lastCommentHighway = Highway.getHighwayType(sLine.substring(12).trim());
@@ -303,12 +318,12 @@ public class Mp_extsimp {
                             //line of header section
                             MPheader = MPheader + sLine + "\n";
                         }
-                        break;
+                //        break;
                     //scan for routing param
-                    case  1:
+                //    case  1:
                         if (sLine.startsWith("RouteParam")) {
                             //'skip ext
-                            if (sLine.startsWith("RouteParamExt")) { break; } //{ goto: GoTo lNoData; // skipp ext}
+                            if (sLine.startsWith("RouteParamExt")) { continue; } // break; } //{ goto: GoTo lNoData; // skipp ext}
                             k2 = sLine.indexOf("=") + 1;
                             //split by "," delimiter
                             routep = sLine.substring(k2).split(",");
@@ -341,21 +356,22 @@ public class Mp_extsimp {
                             }
 
                         }
-                        break;
-                    case  3:
+                //        break;
+                //    case  3:
                         //scan for node routing info:
                         if (sLine.startsWith("Nod")) {
                             //Nod
 
                             k2 = sLine.indexOf("=") + 1;
-                            if (k2 <= 0) { break; } //*TODO:** goto found: GoTo lSkipRoadNode; }
+                            if (k2 <= 0) { continue; }// break; } //*TODO:** goto found: GoTo lSkipRoadNode; }
                             routep = sLine.substring(k2).split(",");
                             k = Integer.parseInt(routep[0]);
 
-                            if (k > Nodes.size()) { //NodesAlloc) {
+                            if (k > addedNodes.size()) { //NodesAlloc) {
                                 //error: too big node index: " + sLine
                                 //*TODO:** goto found: GoTo lSkipRoadNode;
-                                break;
+                                System.out.println("error: too big node index: " + sLine);
+                                continue; //break;
                             }
 
                             //k3 = sLine.indexOf(",", k2);
@@ -363,7 +379,8 @@ public class Mp_extsimp {
                             if (routep.length < 2) {
                                 //error: bad NodeID
                                 //*TODO:** goto found: GoTo lSkipRoadNode;
-                                break;
+                                System.out.println("error: bad NodeID");
+                                continue; //break;
                             }
                             nodeID = Integer.parseInt(routep[1]);
 
@@ -372,12 +389,13 @@ public class Mp_extsimp {
 
                             //store nodeid
                             //Nodes[NodesNum - thisLineNodes + k].nodeID = nodeID;
-                            Nodes.add(new Node(nodeID));
+                            //Nodes.add(new Node(nodeID));
+                            addedNodes.get(k).nodeID = nodeID;
                             
 //*TODO:** label found: lSkipRoadNode:;
                         }
-                        break;
-                    case  2:
+                //        break;
+                //    case  2:
                         if (sLine.startsWith("Data")) {
                             //geometry
                             // вроде как дубль пред. условия - выкинуть
@@ -395,7 +413,7 @@ public class Mp_extsimp {
 //*TODO:** label found: lNextPoint:;
                             k3 = 0;
                             while (true) {
-                                Node addedNode = new Node(-1);
+                                //Node addedNode = new Node(-1);    **
                                 //get lat-lon coords from line
                                 k = sLine.indexOf("(", k3);//k.toLowerCase().indexOf(sLine.toLowerCase());
                                 k2 = sLine.indexOf(",", k);
@@ -413,15 +431,18 @@ public class Mp_extsimp {
                                 Nodes[NodesNum].lon = fLon;
                                 //Nodes[NodesNum].Edges = 0;
                                 Nodes[NodesNum].nodeID = -1;*/
+                                addedNode = new Node(-1);
+                                
                                 addedNode.lat = fLat;
                                 addedNode.lon = fLon;
                                 //addedNode.nodeID = -1;
-                                Nodes.add(addedNode);
+                                addedNodes.add(addedNode);
 
                                 if (thisLineNodes > 0) {
                                     //not the first node of way -> create edge
                                     //Edge jEdge = joinByEdge(Nodes.size() - 2, Nodes.size() - 1);
-                                    Edge jEdge = joinByEdge(Nodes.get(Nodes.size() - 2), addedNode);
+                                    //Edge jEdge = joinByEdge(Nodes.get(Nodes.size() - 2), addedNode);
+                                    Edge jEdge = Edge.joinByEdge(addedNodes.get(addedNodes.size() - 2), addedNode);
                                     //oneway edges is always -> by geometry
                                     /*Edges[j].oneway = wayOneway;
                                     Edges[j].roadtype = wayClass;
@@ -439,12 +460,13 @@ public class Mp_extsimp {
                                         //Edges[j].speed = 3;
                                         jEdge.speed = 3;
                                     }
+                                    addedEdges.add(jEdge);
                                 }
                                 thisLineNodes ++;
 
                                 //'finish node creation
                                 //addNode();
-
+                                
                                 //k = k3;
                                 //*TODO:** goto found: GoTo lNextPoint;
                             }
@@ -454,8 +476,8 @@ public class Mp_extsimp {
 
 //*TODO:** label found: lNoData:;
                         }
-                        break;
-                }
+                //        break;
+                //}
                 //if (!EOF(1)) { //*TODO:** goto found: GoTo lNextLine; }
             }
             //Close(#1);
