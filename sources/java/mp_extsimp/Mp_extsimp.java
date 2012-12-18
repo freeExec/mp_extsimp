@@ -642,12 +642,12 @@ public class Mp_extsimp {
         //Then both found ways will be joined into one bidirectional way, consist from new nodes
         //All related roads will reconnected to new way and old edges were deleted
 
-        int NodesNum = Nodes.size();
-        //mark all nodes as not checked
-        for (i = 0; i <= NodesNum - 1; i++) {
+        //int NodesNum = Nodes.size();
+        //mark all nodes as not checked - default = null
+        /*for (i = 0; i <= NodesNum - 1; i++) {
             //not moved
             Nodes.get(i).mark = null;
-        }
+        }*/
         int EdgesNum = Edges.size();
         for (i = 0; i < EdgesNum; i++) {
             Edge edgeI = Edges.get(i);
@@ -659,7 +659,7 @@ public class Mp_extsimp {
                 continue;
             }
             //skip links
-            if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) > 0) {
+            if (edgeI.roadtype == Highway.HIGHWAY_MASK_LINK) {
                 //*TODO:** goto found: GoTo lFinMarkEdge;
                 continue;
             }
@@ -680,6 +680,7 @@ public class Mp_extsimp {
             //skip marked edge or deleted
             if (edgeI.mark > 0 || edgeI.node1 == null) {
         //*TODO:** goto found: GoTo lSkipEdge;
+                continue;
             }
             //'get bbox
             //bbox_edge = getEdgeBbox(i);
@@ -1092,8 +1093,8 @@ public class Mp_extsimp {
             if (wholeBbox.lat_max < wholeBbox.lat_min || wholeBbox.lon_max < wholeBbox.lon_min) { return; }
 
             //calc number of clusters
-            ClustersLatNum = (int)(1 + (wholeBbox.lat_max - wholeBbox.lat_min) / CLUSTER_SIZE);
-            ClustersLonNum = (int)(1 + (wholeBbox.lon_max - wholeBbox.lon_min) / CLUSTER_SIZE);
+            ClustersLatNum = (int)Math.round(1 + (wholeBbox.lat_max - wholeBbox.lat_min) / CLUSTER_SIZE);
+            ClustersLonNum = (int)Math.round(1 + (wholeBbox.lon_max - wholeBbox.lon_min) / CLUSTER_SIZE);
 
             /*
             //starts of chains
@@ -1111,7 +1112,7 @@ public class Mp_extsimp {
             ClustersLat0 = wholeBbox.lat_min;
             ClustersLon0 = wholeBbox.lon_min;
 
-            for (i = 0; i <= ClustersLatNum * ClustersLonNum - 1; i++) {
+            for (i = 0; i < ClustersLatNum * ClustersLonNum; i++) {
                 //'no nodes in cluster yet
                 ClustersFirst[i] = -1;
                 ClustersLast[i] = -1;
@@ -1124,8 +1125,8 @@ public class Mp_extsimp {
             Node iNode = Nodes.get(i);
             if (iNode.nodeID != Mark.MARK_NODEID_DELETED) {
                 //get cluster from lat/lon
-                x = (int)((iNode.lat - ClustersLat0) / CLUSTER_SIZE);
-                y = (int)((iNode.lon - ClustersLon0) / CLUSTER_SIZE);
+                x = (int)Math.round((iNode.lat - ClustersLat0) / CLUSTER_SIZE);
+                y = (int)Math.round((iNode.lon - ClustersLon0) / CLUSTER_SIZE);
                 j = x + y * ClustersLatNum;
 
                 k = ClustersLast[j];
@@ -1159,10 +1160,10 @@ public class Mp_extsimp {
             //first node needed
 
             //get coordinates of all needed clusters
-            x1 = (int)((box1.lat_min - ClustersLat0) / CLUSTER_SIZE);
-            x2 = (int)((box1.lat_max - ClustersLat0) / CLUSTER_SIZE);
-            y1 = (int)((box1.lon_min - ClustersLon0) / CLUSTER_SIZE);
-            y2 = (int)((box1.lon_max - ClustersLon0) / CLUSTER_SIZE);
+            x1 = (int)Math.round((box1.lat_min - ClustersLat0) / CLUSTER_SIZE);
+            x2 = (int)Math.round((box1.lat_max - ClustersLat0) / CLUSTER_SIZE);
+            y1 = (int)Math.round((box1.lon_min - ClustersLon0) / CLUSTER_SIZE);
+            y2 = (int)Math.round((box1.lon_max - ClustersLon0) / CLUSTER_SIZE);
 
             //store bbox for next searches
             ClustersFindLastBbox = box1;
@@ -1175,10 +1176,10 @@ public class Mp_extsimp {
             }
 
             //get coordinates of all needed clusters
-            x1 = (int)((ClustersFindLastBbox.lat_min - ClustersLat0) / CLUSTER_SIZE);
-            x2 = (int)((ClustersFindLastBbox.lat_max - ClustersLat0) / CLUSTER_SIZE);
-            y1 = (int)((ClustersFindLastBbox.lon_min - ClustersLon0) / CLUSTER_SIZE);
-            y2 = (int)((ClustersFindLastBbox.lon_max - ClustersLon0) / CLUSTER_SIZE);
+            x1 = (int)Math.round((ClustersFindLastBbox.lat_min - ClustersLat0) / CLUSTER_SIZE);
+            x2 = (int)Math.round((ClustersFindLastBbox.lat_max - ClustersLat0) / CLUSTER_SIZE);
+            y1 = (int)Math.round((ClustersFindLastBbox.lon_min - ClustersLon0) / CLUSTER_SIZE);
+            y2 = (int)Math.round((ClustersFindLastBbox.lon_max - ClustersLon0) / CLUSTER_SIZE);
 
             //get coordinates of last used cluster
             x = ClustersFindLastCluster % ClustersLatNum;   // Mod
@@ -1217,7 +1218,7 @@ public class Mp_extsimp {
             //get node from chain
             //k = ClustersChain[ClustersFindLastNode];
             // TODO: не уверен что так можно
-            while ((k = ClustersChain[ClustersFindLastNode]) != -1) {
+            do { // ((k = ClustersChain[ClustersFindLastNode]) != -1) {
             //if (k != -1) {
 
                 //not end of chain
@@ -1241,7 +1242,7 @@ public class Mp_extsimp {
                 //OK, found
                 //*TODO:** goto found: GoTo lExit;
                 return Nodes.get(k);
-            }
+            } while ((k = ClustersChain[ClustersFindLastNode]) != -1);
             //end of chain -> last node in cluster
             x ++;
         }
