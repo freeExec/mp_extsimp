@@ -4,6 +4,7 @@
  */
 package mp_extsimp;
 
+import com.sun.org.apache.xpath.internal.axes.ReverseAxesWalker;
 import java.io.*;
 import java.util.*;
 //import com.sun.corba.se.spi.orbutil.fsm.Input;
@@ -659,7 +660,7 @@ public class Mp_extsimp {
                 continue;
             }
             //skip links
-            if (edgeI.roadtype == Highway.HIGHWAY_MASK_LINK) {
+            if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) != 0) {
                 //*TODO:** goto found: GoTo lFinMarkEdge;
                 continue;
             }
@@ -696,7 +697,7 @@ public class Mp_extsimp {
             while (true) {
 //*TODO:** label found: lSkipNode2:;
                 clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
-                //System.out.println(clusterNode);
+                if (clusterNode != null) System.out.println("k = " + Nodes.indexOf(clusterNode) + " ID=" + clusterNode.nodeID);
                 //next (next time)
                 mode1 = true;
                 //no more nodes
@@ -705,17 +706,17 @@ public class Mp_extsimp {
                     break;
                 }
 
-                //'skip nodes of same edge, deleted and complex nodes
+                //skip nodes of same edge, deleted and complex nodes
                 if (clusterNode == edgeI.node1  || clusterNode == edgeI.node2  || 
                         clusterNode.nodeID == Mark.MARK_NODEID_DELETED  || clusterNode.edgeL.size() != 2) {
                     //*TODO:** goto found: GoTo lSkipNode2;
                     continue;
                 }
 
-                //'calc dist from found node to our edge
+                //calc dist from found node to our edge
                 dist1 = Node.distanceToSegment(edgeI.node1, edgeI.node2, clusterNode);
-                DistanceToSegment_last_case = Node.DistanceToSegment_last_case;
-                //'too far, skip
+                //DistanceToSegment_last_case = Node.DistanceToSegment_last_case;
+                //too far, skip
                 if (dist1 > min_dist) {
                     //*TODO:** goto found: GoTo lSkipNode2;
                     continue;
@@ -769,7 +770,8 @@ public class Mp_extsimp {
                 //reverse of TWforw and TWback removed, as order of edges have no major effect
 
                 //reverse Chain
-                //reverseArray(Chain, ChainNum);
+                reverseArray(Chain);
+
 
                 //second pass, in direction of min_dist_edge
                 goByTwoWays(min_dist_edge, edgeI, joinDistance, combineDistance, maxCosine2, true);
@@ -781,7 +783,7 @@ public class Mp_extsimp {
                 halfChain = Chain.size() / 2;
                 //will "kill" halfchain limit for very short loops
                 // TODO: возможно +1 не нужен
-                if (halfChain < 10) { halfChain = Chain.size() + 1; }
+                if (halfChain < 10) { halfChain = Chain.size(); }
 
                 //call metric length of found road
                 dist1 = 0;
@@ -838,7 +840,7 @@ public class Mp_extsimp {
                 }
                 */
                 //process forward direction
-                for (j = 0; j <= TWforw.size() - 1; j++) {
+                for (j = 0; j < TWforw.size(); j++) {
                     eNode = TWforw.get(j).node1;
                     dNode = TWforw.get(j).node2;
                     //get indexes of nodes inside Chain
@@ -1036,7 +1038,7 @@ public class Mp_extsimp {
 
 //*TODO:** label found: lSkipDel:;
             }
-
+System.out.println("i = " + i);
             //mark edge as checked
             edgeI.mark = 1;
 
@@ -1326,7 +1328,7 @@ public class Mp_extsimp {
         side2circled = 0;
 
         passNumber = 0;
-        if (!params) { passNumber = 1; }
+        if (params) { passNumber = 1; }
 
         if (passNumber == 1) {
             //second pass
@@ -1392,7 +1394,7 @@ public class Mp_extsimp {
 
             angl_min = maxCosine2; angl_min_edge = null;
 
-            if (Chain.get(Chain.size()) == side1j) {
+            if (Chain.get(Chain.size()-1) == side1j) {
                 //side1 is leading, side2 should be prolonged
                 calc_side = 2;
             }
@@ -1518,7 +1520,7 @@ public class Mp_extsimp {
                     //mark both last edges as participating in joining
                     edge_side2.mark = 2;
                     edge_side1.mark = 2;
-                    //'add them to chains
+                    //add them to chains
                     addTW(edge_side2, passNumber);
                     addTW(edge_side1, 1 - passNumber);
             //*TODO:** goto found: GoTo lChainEnds;
@@ -1543,14 +1545,14 @@ public class Mp_extsimp {
                 //addChain(side2j);
                 Chain.add(side2j);
                 //old node will collapse to this new one
-                side2j.mark = Nodes.get(Nodes.size());
+                side2j.mark = Nodes.get(Nodes.size()-1);
             }
             else {
                 //project j node from side1 to middle line
                 dist_t = (side1j.lat - px) * dx + (side1j.lon - py) * dy;
                 Chain.add(side1j);
                 //'old node will collapse to this new one
-                side1j.mark = Nodes.get(Nodes.size());
+                side1j.mark = Nodes.get(Nodes.size()-1);
             }
 
             //create new node
@@ -1566,12 +1568,12 @@ public class Mp_extsimp {
 
             //reproject prev node into current middle line ("ChainNum - 2" because ChainNum were updated above by AddChain)
             //j = Nodes[Chain[ChainNum - 2]]..mark;
-            Node jNode = Chain.get(Chain.size() - 2);
+            Node jNode = Chain.get(Chain.size() - 3).mark;
             dist_t = (jNode.lat - px) * dx + (jNode.lon - py) * dy;
             jNode.lat = px + dist_t * dx * dd;
             jNode.lon = py + dist_t * dy * dd;
 
-            if (Node.distance(jNode, Nodes.get(Nodes.size())) < combineDistance) {
+            if (Node.distance(jNode, Nodes.get(Nodes.size()-1)) < combineDistance) {
                 //Distance from new node to prev-one is too small, collapse node with prev-one
                 //TODO(?): averaging coordinates?
                 if (calc_side == 2) {
@@ -1601,10 +1603,10 @@ public class Mp_extsimp {
                 //in good cases last node should be same as first node
                 //TODO: what if not?
                 //for (int i = Chain.size(); i >= 0; i--) {
-                int i = Chain.size();
+                int i = Chain.size()-1;
                 while(true) {
                     Node iChain = Chain.get(i);
-                    for (int j = 0; j <= i - 1; j++) {
+                    for (int j = 0; j < i; j++) {
                         if (iChain.equals(Chain.get(j))) {
             //*TODO:** goto found: GoTo lFound;
                             i--;
@@ -1745,5 +1747,21 @@ public class Mp_extsimp {
     //Remove all labels stats from memory
     public static void resetLabelStats() {
         LabelStats.clear();
+    }
+
+    //Reverse array into backward direction
+    public static void reverseArray(ArrayList arr) { // TODO: Use of ByRef founded
+        int i;
+        int j;
+        Object t;
+        int num = arr.size();
+        //half of len
+        j = num / 2;
+        for (i = 0; i < j; i++) {
+            //swap elements from first and second halfs
+            t = arr.get(i);
+            arr.set(i, arr.get(num - 1 - i));
+            arr.set(num - 1 - i, t);
+        }
     }
 }

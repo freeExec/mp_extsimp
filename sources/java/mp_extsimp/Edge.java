@@ -154,7 +154,7 @@ public class Edge {
         if (d2 < d1) { d1 = d2; }
         d2 = Node.distanceToSegment(edge2.node1, edge2.node2, edge1.node1);
         if (d2 < d1) { d1 = d2; }
-        d2 = Node.distanceToSegment(edge1.node1, edge2.node2, edge1.node2);
+        d2 = Node.distanceToSegment(edge2.node1, edge2.node2, edge1.node2);
         if (d2 < d1) { d1 = d2; }
         return d1;
     }

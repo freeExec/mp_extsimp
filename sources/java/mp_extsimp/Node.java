@@ -80,19 +80,19 @@ public class Node {
         double c;
         double s2;
 
-        //'Calc squares of triangle sides
+        //Calc squares of triangle sides
         a = distanceSquare(node1, node2);
         b = distanceSquare(node1, node3);
         c = distanceSquare(node2, node3);
         if (a == 0) {
             _rtn = Math.sqrt(b);
-            //'node1=node2
+            //node1=node2
             DistanceToSegment_last_case = 0;
             return _rtn;
         }
         else if (b > (a + c)) {
             _rtn = Math.sqrt(c);
-            //'node1 is closest point to node3
+            //node1 is closest point to node3
             DistanceToSegment_last_case = 1;
             return _rtn;
         }
