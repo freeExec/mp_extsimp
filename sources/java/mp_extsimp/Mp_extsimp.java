@@ -221,6 +221,9 @@ public class Mp_extsimp {
             Node addedNode;// = new Node(-1);
             ArrayList<Node> addedNodes = new ArrayList<Node>();
             ArrayList<Edge> addedEdges = new ArrayList<Edge>();
+            
+            // delete after fix
+            int autoINCNodesNum = 0;
 
             while(br.ready()) {
     //*TODO:** label found: lNextLine:;
@@ -279,6 +282,9 @@ public class Mp_extsimp {
                     if (waySpeed != -1 && addedNodes.size() > 0 && addedEdges.size() > 0) {
                             Nodes.addAll(addedNodes);
                             Edges.addAll(addedEdges);
+                    } else {
+                // delete after fix
+autoINCNodesNum -= addedNodes.size();
                     }
                     //if (iPhase > 0 && iPhase < 3) {
                         //not last pass of section -> goto start of it
@@ -437,6 +443,8 @@ public class Mp_extsimp {
                                 addedNode.lat = fLat;
                                 addedNode.lon = fLon;
                                 //addedNode.nodeID = -1;
+                                                // delete after fix
+                addedNode.VBNum = autoINCNodesNum++;
                                 addedNodes.add(addedNode);
 
                                 if (thisLineNodes > 0) {
@@ -627,10 +635,12 @@ public class Mp_extsimp {
 
         //chain of forward edges
         //int[] edgesForw;
-        ArrayList<Edge> edgesForw;
+        //ArrayList<Edge> edgesForw;
+        Edge[] edgesForw;
         //chain of backward edges
         //int[] edgesBack;
-        ArrayList<Edge> edgesBack;
+        //ArrayList<Edge> edgesBack;
+        Edge[] edgesBack;
         //1 if road is circled
         int loopChain = 0;
         //len of half of road
@@ -829,9 +839,10 @@ public class Mp_extsimp {
                 //G.redim(edgesBack, ChainNum);
                 //edgesBack = new int[ChainNum];
                 // TODO: не уверен что не будет расширение элементов, но буду надеяться
-                edgesForw = new ArrayList<Edge>(Chain.size());
-                edgesBack = new ArrayList<Edge>(Chain.size());
-                
+                //edgesForw = new ArrayList<Edge>(Chain.size());
+                //edgesBack = new ArrayList<Edge>(Chain.size());
+                edgesForw = new Edge[Chain.size()];
+                edgesBack = new Edge[Chain.size()];
                 // TODO: думаю не актуально
                 /*
                 for (j = 0; j < Chain.size(); j++) {
@@ -863,7 +874,8 @@ public class Mp_extsimp {
                         }
                         for (int q1 = e; q1 < d; q1++) {
                             //in forward direction between q and q+1 node is edge TWforw(j)
-                            edgesForw.set(q1, TWforw.get(j));
+                            //edgesForw.set(q1, TWforw.get(j));
+                            edgesForw[q1] = TWforw.get(j);
                         }
                     }
                     else {
@@ -878,10 +890,12 @@ public class Mp_extsimp {
                             //e and d is close to ends of chain
                             //-> this is really forward edge crossing 0 of chain in a loop road
                             for (int q1 = 0; q1 < d; q1++) {
-                                edgesForw.set(q1, TWforw.get(j));
+                                //edgesForw.set(q1, TWforw.get(j));
+                                edgesForw[q1] = TWforw.get(j);
                             }
                             for (int q1 = e; q1 < Chain.size(); q1++) {
-                                edgesForw.set(q1, TWforw.get(j));
+                                //edgesForw.set(q1, TWforw.get(j));
+                                edgesForw[q1] = TWforw.get(j);
                             }
                         }
                     }
@@ -911,7 +925,8 @@ public class Mp_extsimp {
                             continue;
                         }
                         for (int q1 = d; q1 < e; q1++) {
-                            edgesBack.set(q1, TWback.get(j));
+                            //edgesBack.set(q1, TWback.get(j));
+                            edgesBack[q1] = TWback.get(j);
                         }
                     }
                     else {
@@ -926,10 +941,10 @@ public class Mp_extsimp {
                             //e and d is close to ends of chain
                             //-> this is really backward edge crossing 0 of chain in a loop road
                             for (int q1 = 0; q1 < e; q1++) {
-                                edgesBack.set(q1, TWback.get(j));
+                                edgesBack[q1] = TWback.get(j);
                             }
                             for (int q1 = d; q1 < Chain.size(); q1++) {
-                                edgesBack.set(q1, TWback.get(j));
+                                edgesBack[q1] = TWback.get(j);
                             }
                         }
                     }
@@ -939,8 +954,8 @@ public class Mp_extsimp {
                 for (j = 1; j < Chain.size(); j++) {
                     Node chainJ_1 = Chain.get(j - 1);
                     Node chainJ = Chain.get(j);
-                    Edge edgesForwJ_1 = edgesForw.get(j - 1);
-                    Edge edgesBackJ_1 = edgesBack.get(j - 1);
+                    Edge edgesForwJ_1 = edgesForw[j - 1];
+                    Edge edgesBackJ_1 = edgesBack[j - 1];
                     dNode = chainJ_1.mark;
                     eNode = chainJ.mark;
                     if (dNode != eNode) {
@@ -1288,23 +1303,23 @@ System.out.println("i = " + i);
         Node side1i, side1j;
         Node side2i, side2j;
         //flags of circle on each side
-        int side1circled = 0;
-        int side2circled = 0;
+        int side1circled;
+        int side2circled;
 
         Node[] side = new Node[4];
         double[] dist = new double[4];
-        double dist_t = 0;
-        double dx = 0;
-        double dy = 0;
+        double dist_t;
+        double dx;
+        double dy;
         double px, py;
-        double dd = 0;
-        int roadtype = 0;
-        double angl = 0;
-        int calc_side = 0;
+        double dd;
+        int roadtype;
+        double angl;
+        int calc_side;
         double angl_min;
         Edge angl_min_edge;
-        int checkchain = 0;
-        int passNumber = 0;
+        int checkchain;
+        int passNumber;
 
         //keep road type for comparing
         roadtype = edge1.roadtype;
@@ -1384,6 +1399,9 @@ System.out.println("i = " + i);
                 addedNode.mark = null;
                 addedNode.lat = px + dist[i] * dx * dd;
                 addedNode.lon = py + dist[i] * dy * dd;
+                
+                // delete after fix
+                addedNode.VBNum = Nodes.size();
                 Nodes.add(addedNode);
                 side[i].mark = addedNode;
             }
@@ -1532,12 +1550,16 @@ System.out.println("i = " + i);
             //TODO: fix (not safe to 180/-180 edge)
             dx = side1j.lat - side1i.lat + side2j.lat - side2i.lat;
             dy = side1j.lon - side1i.lon + side2j.lon - side2i.lon;
-            px = side1i.lat + side2i.lat * 0.5;
-            py = side1i.lon + side2i.lon * 0.5;
+            px = (side1i.lat + side2i.lat) * 0.5;
+            py = (side1i.lon + side2i.lon) * 0.5;
             dd = 1 / (dx * dx + dy * dy);
 
             //remember current chain len
             checkchain = Chain.size();
+
+            //create new node
+            // создаю чуть раньше, т.к. ссылка не него используется в след. блоке
+            Node createNode = new Node(-1);
 
             if (calc_side == 2) {
                 //project j node from side2 to middle line
@@ -1545,18 +1567,16 @@ System.out.println("i = " + i);
                 //addChain(side2j);
                 Chain.add(side2j);
                 //old node will collapse to this new one
-                side2j.mark = Nodes.get(Nodes.size()-1);
+                side2j.mark = createNode;   //Nodes.get(Nodes.size()-1);
             }
             else {
                 //project j node from side1 to middle line
                 dist_t = (side1j.lat - px) * dx + (side1j.lon - py) * dy;
                 Chain.add(side1j);
                 //'old node will collapse to this new one
-                side1j.mark = Nodes.get(Nodes.size()-1);
+                side1j.mark = createNode;   //Nodes.get(Nodes.size()-1);
             }
 
-            //create new node
-            Node createNode = new Node(-1);
             /*Nodes[NodesNum].Edges = 0;
             Nodes[NodesNum]..nodeID = -1;
             Nodes[NodesNum]..mark = -1;
@@ -1568,12 +1588,12 @@ System.out.println("i = " + i);
 
             //reproject prev node into current middle line ("ChainNum - 2" because ChainNum were updated above by AddChain)
             //j = Nodes[Chain[ChainNum - 2]]..mark;
-            Node jNode = Chain.get(Chain.size() - 3).mark;
+            Node jNode = Chain.get(Chain.size() - 2).mark;
             dist_t = (jNode.lat - px) * dx + (jNode.lon - py) * dy;
             jNode.lat = px + dist_t * dx * dd;
             jNode.lon = py + dist_t * dy * dd;
 
-            if (Node.distance(jNode, Nodes.get(Nodes.size()-1)) < combineDistance) {
+            if (Node.distance(jNode, createNode /*Nodes.get(Nodes.size()-1)*/) < combineDistance) {
                 //Distance from new node to prev-one is too small, collapse node with prev-one
                 //TODO(?): averaging coordinates?
                 if (calc_side == 2) {
@@ -1586,6 +1606,9 @@ System.out.println("i = " + i);
             }
             else {
                 //addNode();
+                                // delete after fix
+                createNode.VBNum = Nodes.size();
+                
                 Nodes.add(createNode);
                 //fix order of nodes in chain
                 fixChainOrder(checkchain);

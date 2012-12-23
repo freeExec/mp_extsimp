@@ -38,7 +38,10 @@ public class Node {
     //public int Edges;      //number of edges, -1 means "not counted"
     public Node mark;       //internal marker for all-network algo-s
     public double temp_dist;//internal value for for all-network algo-s
-    
+
+    // TODO Debug <-> VB
+    public int VBNum;
+
     public Node() {
         Init();        
     }
