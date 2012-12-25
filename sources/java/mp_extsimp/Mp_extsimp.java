@@ -707,7 +707,7 @@ autoINCNodesNum -= addedNodes.size();
             while (true) {
 //*TODO:** label found: lSkipNode2:;
                 clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
-                if (clusterNode != null) System.out.println("k = " + Nodes.indexOf(clusterNode) + " ID=" + clusterNode.nodeID);
+                if (clusterNode != null) System.out.println("k = " + clusterNode.VBNum + " ID=" + clusterNode.nodeID);
                 //next (next time)
                 mode1 = true;
                 //no more nodes
@@ -950,7 +950,7 @@ autoINCNodesNum -= addedNodes.size();
                     }
 //*TODO:** label found: lSkip2:;
                 }
-
+j=1;
                 for (j = 1; j < Chain.size(); j++) {
                     Node chainJ_1 = Chain.get(j - 1);
                     Node chainJ = Chain.get(j);
@@ -1083,7 +1083,9 @@ System.out.println("i = " + i);
             //TODO(?): remove chain from deleted nodes
             //G.redimPreserve(ClustersChain, NodesNum);
             //TODO: хз, что тут делать, пока
-            ClustersChain = new int[Nodes.size()];
+            int[] newClustersChain = new int[Nodes.size()];
+            System.arraycopy(ClustersChain, 0, newClustersChain, 0, ClustersChain.length);
+            ClustersChain = newClustersChain;//new int[Nodes.size()];
 
             //*TODO:** goto found: GoTo lClustering;
         } else {

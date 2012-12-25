@@ -46,7 +46,7 @@ public class LabelStat {
         if (text.length() < 1) { return; }
         //split string by delimiter into set of strings
         marks = text.split(",");
-        for (i = 0; i <= marks.length; i++) {
+        for (i = 0; i < marks.length; i++) {
             addLabelStat1(marks[i], LabelStats);
         }
     }
