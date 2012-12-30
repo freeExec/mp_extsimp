@@ -707,7 +707,8 @@ autoINCNodesNum -= addedNodes.size();
             while (true) {
 //*TODO:** label found: lSkipNode2:;
                 clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
-                if (clusterNode != null) System.out.println("k = " + clusterNode.VBNum + " ID=" + clusterNode.nodeID);
+                if (clusterNode != null) System.out.println("Node(" + clusterNode.VBNum + ").ID = " + clusterNode.nodeID);
+                // System.out.println("k = " + clusterNode.VBNum + " ID=" + clusterNode.nodeID);
                 //next (next time)
                 mode1 = true;
                 //no more nodes
@@ -773,6 +774,9 @@ autoINCNodesNum -= addedNodes.size();
                 //ChainNum = 0;
                 //TWforwNum = 0;
                 //TWbackNum = 0;
+                Chain.clear();
+                TWforw.clear();
+                TWback.clear();
 
                 //first pass, in direction of edge i
                 goByTwoWays(edgeI, min_dist_edge, joinDistance, combineDistance, maxCosine2, false);
@@ -1256,7 +1260,7 @@ System.out.println("i = " + i);
                 //*TODO:** goto found: GoTo lNextNode;
                     continue;
                 }
-                //'node outside desired bbox - find next
+                //node outside desired bbox - find next
                 if (testNode.lat < ClustersFindLastBbox.lat_min || testNode.lat > ClustersFindLastBbox.lat_max) {
                     //*TODO:** goto found: GoTo lNextNode;
                     continue;
