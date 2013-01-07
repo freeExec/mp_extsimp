@@ -822,240 +822,241 @@ autoINCNodesNum -= addedNodes.size();
                         }
                     }
                     //*TODO:** goto found: GoTo lSkipDel;
-                }
+                } else {
 
+                    //process both directions edges list
+                    //to build index of edges, which joins between each pair of nodes in Chain
 
-                //process both directions edges list
-                //to build index of edges, which joins between each pair of nodes in Chain
+                    //note: is some rare cases chain of nodes have pleats, where nodes of one directions
+                    //in Chain swaps position due to non uniform projecting of nodes to middle-line
+                    //In this cases one or more edges joins to bidirectional road in backward direction
+                    //to the original direction of this one-way line
+                    //These edges could be ignored during combining parameter of bidirectional road
+                    //(as they are usually very short)
+                    //also at least two other edges will overlap in at least one interval between nodes
+                    //only one of them will be counted during combining parameter (last in TW* array)
+                    //this is considired acceptable, as they are near edges of very same road
 
-                //note: is some rare cases chain of nodes have pleats, where nodes of one directions
-                //in Chain swaps position due to non uniform projecting of nodes to middle-line
-                //In this cases one or more edges joins to bidirectional road in backward direction
-                //to the original direction of this one-way line
-                //These edges could be ignored during combining parameter of bidirectional road
-                //(as they are usually very short)
-                //also at least two other edges will overlap in at least one interval between nodes
-                //only one of them will be counted during combining parameter (last in TW* array)
-                //this is considired acceptable, as they are near edges of very same road
-
-                //G.redim(edgesForw, ChainNum);
-                //edgesForw = new int[ChainNum];
-                //G.redim(edgesBack, ChainNum);
-                //edgesBack = new int[ChainNum];
-                // TODO: не уверен что не будет расширение элементов, но буду надеяться
-                //edgesForw = new ArrayList<Edge>(Chain.size());
-                //edgesBack = new ArrayList<Edge>(Chain.size());
-                edgesForw = new Edge[Chain.size()];
-                edgesBack = new Edge[Chain.size()];
-                // TODO: думаю не актуально
-                /*
-                for (j = 0; j < Chain.size(); j++) {
-                    edgesForw.set(j, null);    // -1;
-                    edgesBack.set(j, null);    // -1;
-                }
-                */
-                //process forward direction
-                for (j = 0; j < TWforw.size(); j++) {
-                    eNode = TWforw.get(j).node1;
-                    dNode = TWforw.get(j).node2;
-                    //get indexes of nodes inside Chain
-                    e = Chain.indexOf(eNode);
-                    d = Chain.indexOf(dNode);
-                    if (e == -1 || d == -1) {
-                        //(should not happen)
-                        //edge with nodes not in chain - skip
-                //*TODO:** goto found: GoTo lSkip1;
-                        continue;
+                    //G.redim(edgesForw, ChainNum);
+                    //edgesForw = new int[ChainNum];
+                    //G.redim(edgesBack, ChainNum);
+                    //edgesBack = new int[ChainNum];
+                    // TODO: не уверен что не будет расширение элементов, но буду надеяться
+                    //edgesForw = new ArrayList<Edge>(Chain.size());
+                    //edgesBack = new ArrayList<Edge>(Chain.size());
+                    edgesForw = new Edge[Chain.size()];
+                    edgesBack = new Edge[Chain.size()];
+                    // TODO: думаю не актуально
+                    /*
+                    for (j = 0; j < Chain.size(); j++) {
+                        edgesForw.set(j, null);    // -1;
+                        edgesBack.set(j, null);    // -1;
                     }
-
-                    if (e < d) {
-                        //normal forward edge (or pleat crossing 0 of chain)
-                        // ... e ---> d .....
-                        //skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
-                        if (loopChain == 1  && (d - e) > halfChain) { 
-                //*TODO:** goto found: GoTo lSkip1:;
+                    */
+                    //process forward direction
+                    for (j = 0; j < TWforw.size(); j++) {
+                        eNode = TWforw.get(j).node1;
+                        dNode = TWforw.get(j).node2;
+                        //get indexes of nodes inside Chain
+                        e = Chain.indexOf(eNode);
+                        d = Chain.indexOf(dNode);
+                        if (e == -1 || d == -1) {
+                            //(should not happen)
+                            //edge with nodes not in chain - skip
+                    //*TODO:** goto found: GoTo lSkip1;
                             continue;
                         }
-                        for (int q1 = e; q1 < d; q1++) {
-                            //in forward direction between q and q+1 node is edge TWforw(j)
-                            //edgesForw.set(q1, TWforw.get(j));
-                            edgesForw[q1] = TWforw.get(j);
-                        }
-                    }
-                    else {
-                        //pleat edge (or normal crossing 0 of chain)
-                        // ---.---> d .... ... .... e --->
-                        //'on straight chains forward edge could not go backward without pleat
-                        if (loopChain == 0) {
-                //*TODO:** goto found: GoTo lSkip1;
-                            continue;
-                        }
-                        if ((e - d) > halfChain) {
-                            //e and d is close to ends of chain
-                            //-> this is really forward edge crossing 0 of chain in a loop road
-                            for (int q1 = 0; q1 < d; q1++) {
+//                        System.out.println("indexOf: " + e + ", " + d);
+
+                        if (e < d) {
+                            //normal forward edge (or pleat crossing 0 of chain)
+                            // ... e ---> d .....
+                            //skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
+                            if (loopChain == 1  && (d - e) > halfChain) {
+                    //*TODO:** goto found: GoTo lSkip1:;
+                                continue;
+                            }
+                            for (int q1 = e; q1 < d; q1++) {
+                                //in forward direction between q and q+1 node is edge TWforw(j)
                                 //edgesForw.set(q1, TWforw.get(j));
                                 edgesForw[q1] = TWforw.get(j);
                             }
-                            for (int q1 = e; q1 < Chain.size(); q1++) {
-                                //edgesForw.set(q1, TWforw.get(j));
-                                edgesForw[q1] = TWforw.get(j);
-                            }
-                        }
-                    }
-//*TODO:** label found: lSkip1:;
-                }
-
-                //process backward direction
-                for (j = 0; j < TWback.size(); j++) {
-                    eNode = TWback.get(j).node1;
-                    dNode = TWback.get(j).node2;
-                    //get indexes of nodes inside Chain
-                    e = Chain.indexOf(eNode);
-                    d = Chain.indexOf(dNode);
-                    if (e == -1  || d == -1) {
-                        //(should not happen)
-                        //edge with nodes not in chain - skip
-            //*TODO:** goto found: GoTo lSkip2;
-                        continue;
-                    }
-
-                    if (d < e) {
-                        //normal backward edge (or pleat crossing 0 of chain)
-                        // ... d <--- e .....
-                        //'skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
-                        if (loopChain == 1  && (e - d) > halfChain) {
-                            //*TODO:** label found: //*TODO:** goto found: GoTo lSkip2:;
-                            continue;
-                        }
-                        for (int q1 = d; q1 < e; q1++) {
-                            //edgesBack.set(q1, TWback.get(j));
-                            edgesBack[q1] = TWback.get(j);
-                        }
-                    }
-                    else {
-                        //pleat edge (or normal crossing 0 of chain)
-                        // <-.-- e ... ... .... ... d <--.---.---
-                        //'on straight chains backward edge could not go forward without pleat
-                        if (loopChain == 0) {
-                            //*TODO:** goto found: GoTo lSkip2;
-                            continue;
-                        }
-                        if ((d - e) > halfChain) {
-                            //e and d is close to ends of chain
-                            //-> this is really backward edge crossing 0 of chain in a loop road
-                            for (int q1 = 0; q1 < e; q1++) {
-                                edgesBack[q1] = TWback.get(j);
-                            }
-                            for (int q1 = d; q1 < Chain.size(); q1++) {
-                                edgesBack[q1] = TWback.get(j);
-                            }
-                        }
-                    }
-//*TODO:** label found: lSkip2:;
-                }
-j=1;
-                for (j = 1; j < Chain.size(); j++) {
-                    Node chainJ_1 = Chain.get(j - 1);
-                    Node chainJ = Chain.get(j);
-                    Edge edgesForwJ_1 = edgesForw[j - 1];
-                    Edge edgesBackJ_1 = edgesBack[j - 1];
-                    dNode = chainJ_1.mark;
-                    eNode = chainJ.mark;
-                    if (dNode != eNode) {
-                        /*k = joinByEdge(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
-                        Edges.get(k).roadtype = roadtype;
-                        Edges.get(k).oneway = 0;
-                        Edges.get(k).mark = 1;
-                        */
-                        Edge edg = joinByEdge(chainJ_1.mark, chainJ.mark);
-                        // TODO: не будет ли потери при байте
-                        edg.roadtype = (byte)roadtype;
-                        edg.oneway = 0;
-                        edg.mark = 1;
-
-                        if ((edgesForwJ_1 == null) && (edgesBackJ_1 == null)) {
-                            //no edges for this interval between nodes
-                            //(should never happens)
-                            //default value
-                            /*Edges.get(k).speed = 3;
-                            Edges.get(k).label = "";*/
-                            edg.speed = 3;
-                            edg.label = "";
                         }
                         else {
-                            //get minimal speed class of both edges
-                            speednew = 10;
-                            resetLabelStats();
-                            if (edgesForwJ_1 != null) {
-                                //forward edge present
-                                speednew = edgesForwJ_1.speed;
-                                addLabelStat0(edgesForwJ_1.label);
+                            //pleat edge (or normal crossing 0 of chain)
+                            // ---.---> d .... ... .... e --->
+                            //'on straight chains forward edge could not go backward without pleat
+                            if (loopChain == 0) {
+                    //*TODO:** goto found: GoTo lSkip1;
+                                continue;
                             }
-                            if (edgesBackJ_1 != null) {
-                                //backward edge present
-                                if (speednew > edgesBackJ_1.speed) { speednew = edgesBackJ_1.speed; }
-                                addLabelStat0(edgesBackJ_1.label);
+                            if ((e - d) > halfChain) {
+                                //e and d is close to ends of chain
+                                //-> this is really forward edge crossing 0 of chain in a loop road
+                                for (int q1 = 0; q1 < d; q1++) {
+                                    //edgesForw.set(q1, TWforw.get(j));
+                                    edgesForw[q1] = TWforw.get(j);
+                                }
+                                for (int q1 = e; q1 < Chain.size(); q1++) {
+                                    //edgesForw.set(q1, TWforw.get(j));
+                                    edgesForw[q1] = TWforw.get(j);
+                                }
                             }
-                            /*Edges.get(k).speed = speednew;
-                            Edges.get(k).label = getLabelByStats(0);*/
-                            // TODO (byte)
-                            edg.speed = (byte)speednew;
-                            edg.label = getLabelByStats(0);
+                        }
+    //*TODO:** label found: lSkip1:;
+                    }
+
+                    //process backward direction
+                    for (j = 0; j < TWback.size(); j++) {
+                        eNode = TWback.get(j).node1;
+                        dNode = TWback.get(j).node2;
+                        //get indexes of nodes inside Chain
+                        e = Chain.indexOf(eNode);
+                        d = Chain.indexOf(dNode);
+                        if (e == -1  || d == -1) {
+                            //(should not happen)
+                            //edge with nodes not in chain - skip
+                //*TODO:** goto found: GoTo lSkip2;
+                            continue;
                         }
 
-
-                        //ends of chain could be oneway if only one edge (or even part is joining there
-                        //ex:     * ------> * --------> * ----------> *
-                        //             * <-------- * <--------- * <---------- *
-                        //joins into:
-                        //        *--->*----*------*----*-------*-----*<------*
-
-                        if (edgesBackJ_1 == null) {
-                            //no backward edge - result in one-way
-                            //Edges.get(k).oneway = 1;
-                            edg.oneway = 1;
+                        if (d < e) {
+                            //normal backward edge (or pleat crossing 0 of chain)
+                            // ... d <--- e .....
+                            //'skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
+                            if (loopChain == 1  && (e - d) > halfChain) {
+                                //*TODO:** label found: //*TODO:** goto found: GoTo lSkip2:;
+                                continue;
+                            }
+                            for (int q1 = d; q1 < e; q1++) {
+                                //edgesBack.set(q1, TWback.get(j));
+                                edgesBack[q1] = TWback.get(j);
+                            }
                         }
-                        else if (edgesForwJ_1 == null) {
-                            //no forward edge - result in one-way, backward to other road
-                            /*Edges.get(k).oneway = 1;
-                            Edges.get(k).node1 = Nodes[Chain[j]]..mark;
-                            Edges.get(k).node2 = Nodes[Chain[j - 1]]..mark;*/
-                            edg.oneway = 1;
-                            edg.node1 = chainJ.mark;
-                            edg.node2 = chainJ_1.mark;
+                        else {
+                            //pleat edge (or normal crossing 0 of chain)
+                            // <-.-- e ... ... .... ... d <--.---.---
+                            //'on straight chains backward edge could not go forward without pleat
+                            if (loopChain == 0) {
+                                //*TODO:** goto found: GoTo lSkip2;
+                                continue;
+                            }
+                            if ((d - e) > halfChain) {
+                                //e and d is close to ends of chain
+                                //-> this is really backward edge crossing 0 of chain in a loop road
+                                for (int q1 = 0; q1 < e; q1++) {
+                                    edgesBack[q1] = TWback.get(j);
+                                }
+                                for (int q1 = d; q1 < Chain.size(); q1++) {
+                                    edgesBack[q1] = TWback.get(j);
+                                }
+                            }
+                        }
+    //*TODO:** label found: lSkip2:;
+                    }
+    j=1;
+                    for (j = 1; j < Chain.size(); j++) {
+                        Node chainJ_1 = Chain.get(j - 1);
+                        Node chainJ = Chain.get(j);
+                        Edge edgesForwJ_1 = edgesForw[j - 1];
+                        Edge edgesBackJ_1 = edgesBack[j - 1];
+                        dNode = chainJ_1.mark;
+                        eNode = chainJ.mark;
+                        if (dNode != eNode) {
+                            /*k = joinByEdge(Nodes.get(Chain[j - 1]).mark, Nodes.get(Chain[j]).mark);
+                            Edges.get(k).roadtype = roadtype;
+                            Edges.get(k).oneway = 0;
+                            Edges.get(k).mark = 1;
+                            */
+                            Edge edg = joinByEdge(chainJ_1.mark, chainJ.mark);
+                            // TODO: не будет ли потери при байте
+                            edg.roadtype = (byte)roadtype;
+                            edg.oneway = 0;
+                            edg.mark = 1;
+
+                            if ((edgesForwJ_1 == null) && (edgesBackJ_1 == null)) {
+                                //no edges for this interval between nodes
+                                //(should never happens)
+                                //default value
+                                /*Edges.get(k).speed = 3;
+                                Edges.get(k).label = "";*/
+                                edg.speed = 3;
+                                edg.label = "";
+                            }
+                            else {
+                                //get minimal speed class of both edges
+                                speednew = 10;
+                                resetLabelStats();
+                                if (edgesForwJ_1 != null) {
+                                    //forward edge present
+                                    speednew = edgesForwJ_1.speed;
+                                    addLabelStat0(edgesForwJ_1.label);
+                                }
+                                if (edgesBackJ_1 != null) {
+                                    //backward edge present
+                                    if (speednew > edgesBackJ_1.speed) { speednew = edgesBackJ_1.speed; }
+                                    addLabelStat0(edgesBackJ_1.label);
+                                }
+                                /*Edges.get(k).speed = speednew;
+                                Edges.get(k).label = getLabelByStats(0);*/
+                                // TODO (byte)
+                                edg.speed = (byte)speednew;
+                                edg.label = getLabelByStats(0);
+                            }
+
+
+                            //ends of chain could be oneway if only one edge (or even part is joining there
+                            //ex:     * ------> * --------> * ----------> *
+                            //             * <-------- * <--------- * <---------- *
+                            //joins into:
+                            //        *--->*----*------*----*-------*-----*<------*
+
+                            if (edgesBackJ_1 == null) {
+                                //no backward edge - result in one-way
+                                //Edges.get(k).oneway = 1;
+                                edg.oneway = 1;
+                            }
+                            else if (edgesForwJ_1 == null) {
+                                //no forward edge - result in one-way, backward to other road
+                                /*Edges.get(k).oneway = 1;
+                                Edges.get(k).node1 = Nodes[Chain[j]]..mark;
+                                Edges.get(k).node2 = Nodes[Chain[j - 1]]..mark;*/
+                                edg.oneway = 1;
+                                edg.node1 = chainJ.mark;
+                                edg.node2 = chainJ_1.mark;
+                            }
                         }
                     }
-                }
 
-                //delete all old edges
-                /*for (j = 0; j < TWforw.size(); j++) {
-                    TWforw.get(j).delEdge();
-                }
-                for (j = 0; j < TWback.size(); j++) {
-                    delEdge(TWback.get(j));
-                }
-                */
-                for(Iterator<Edge> iEdge = TWforw.iterator(); iEdge.hasNext();) {
-                    iEdge.next().delEdge();
-                }
-                for(Iterator<Edge> iEdge = TWback.iterator(); iEdge.hasNext();) {
-                    iEdge.next().delEdge();
-                }
+                    //delete all old edges
+                    /*for (j = 0; j < TWforw.size(); j++) {
+                        TWforw.get(j).delEdge();
+                    }
+                    for (j = 0; j < TWback.size(); j++) {
+                        delEdge(TWback.get(j));
+                    }
+                    */
+                    for(Iterator<Edge> iEdge = TWforw.iterator(); iEdge.hasNext();) {
+                        iEdge.next().delEdge();
+                    }
+                    for(Iterator<Edge> iEdge = TWback.iterator(); iEdge.hasNext();) {
+                        iEdge.next().delEdge();
+                    }
 
-                //merge all old nodes into new ones
-                /*for (j = 0; j <= ChainNum - 1; j++) {
-                    mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
-                }*/
-                for(Iterator<Node> iNode = Chain.iterator(); iNode.hasNext();) {
-                    Node iNodeN = iNode.next();
-                    Node.mergeNodes(iNodeN.mark, iNodeN, 1);
+                    //merge all old nodes into new ones
+                    /*for (j = 0; j <= ChainNum - 1; j++) {
+                        mergeNodes(Nodes.get(Chain[j]).mark, Chain[j], 1);
+                    }*/
+                    for(Iterator<Node> iNode = Chain.iterator(); iNode.hasNext();) {
+                        Node iNodeN = iNode.next();
+                        Node.mergeNodes(iNodeN.mark, iNodeN, 1);
+                    }
+
+                    //update cluster index to include only newly created nodes (i.e. nodes of joined road)
+                    buildNodeClusterIndex(true);
+
+    //*TODO:** label found: lSkipDel:;
                 }
-
-                //update cluster index to include only newly created nodes (i.e. nodes of joined road)
-                buildNodeClusterIndex(true);
-
-//*TODO:** label found: lSkipDel:;
             }
 System.out.println("i = " + i);
             //mark edge as checked
@@ -1180,7 +1181,7 @@ System.out.println("i = " + i);
         int x, y;
         int x1, x2, y1, y2;
 
-        boolean skip = true;
+        boolean endChain = true;
         
         if (!flags) {
             //first node needed
@@ -1212,13 +1213,16 @@ System.out.println("i = " + i);
             y = (int)((ClustersFindLastCluster - x) / ClustersLatNum);  // было целое деление или как-то так "\"
 
             k = ClustersChain[ClustersFindLastNode];
-            skip = (k == -1);
+            if (k == -1) {
+                x++;
+                endChain = true;
+            } else { endChain = false; }
         }
         
         
         //proceed to next cluster
         while(true) {
-            if (skip) {
+            if (endChain) {
                 //next line of cluster
                 if (x > x2) {
                     y ++;
@@ -1275,7 +1279,7 @@ System.out.println("i = " + i);
             } while ((k = ClustersChain[ClustersFindLastNode]) != -1);
             //end of chain -> last node in cluster
             x ++;
-            skip = true;
+            endChain = true;
         }
         
         
