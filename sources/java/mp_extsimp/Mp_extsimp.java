@@ -255,7 +255,7 @@ public class Mp_extsimp {
                         //display progress
                         //Form1.Caption = "Load: " + CStr(iPrevLine) + " / " + CStr(fileLen): Form1.Refresh;
                         lastPercent = (int)(iPrevLine / 1023);
-                        System.out.printf("Load: (%3$d%%) %1$d / %2$d\n", iPrevLine, fileLen, lastPercent);
+// TODO                        System.out.printf("Load: (%3$d%%) %1$d / %2$d\n", iPrevLine, fileLen, lastPercent);
                     }
                     dataLineNum = 0;
                     //if (iPhase == 0) {
@@ -566,7 +566,7 @@ autoINCNodesNum -= addedNodes.size();
                 if ((i % 80) == 0) {  //8191
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    System.out.printf("Join soft %1$d / %2$d\n", i, NodesNum);
+// TODO                    System.out.printf("Join soft %1$d / %2$d\n", i, NodesNum);
                 }
 
             }

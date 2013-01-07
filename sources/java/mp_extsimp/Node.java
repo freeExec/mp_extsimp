@@ -173,20 +173,21 @@ public class Node {
         node2.edgeL.clear();
 
         //kill all void edges right now
-        /*
+        
         i = 0;
-        p = node1.edgeL.size();
-        while (i < p) {     //Nodes[node1].Edges) {
-            //j = Nodes.get(node1).edgeL[i];
+        while (i < node1.edgeL.size()) {
             edgeJ = node1.edgeL.get(i);
-            if (edgeJ.node1 == edgeJ.node2) { edgeJ.delEdge(); }
+            if (edgeJ.node1 == edgeJ.node2) { 
+                edgeJ.delEdge();
+            }
             i = i + 1;
         }
-        */
-        for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
+
+        // Так нельзя, т.к. меняется количесво точек в этой линии
+        /*for(Iterator<Edge> iEdge = node1.edgeL.iterator(); iEdge.hasNext();) {
             Edge iEdgeN = iEdge.next();
             if (iEdgeN.node1 == iEdgeN.node2) { iEdgeN.delEdge(); }
-        }
+        }*/
 
         if (flag == 1) {
             //Calc average coordinates
