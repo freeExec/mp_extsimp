@@ -99,5 +99,190 @@ public class Highway {
         }
         return _rtn;
     }
- 
+
+    //Convert constants to polyline type
+    public static int getType_by_Highway(int highwayType) {
+        int _rtn = 0;
+        switch (highwayType) {
+            case  HIGHWAY_MOTORWAY:
+                _rtn = 1;
+                break;
+            case  HIGHWAY_MOTORWAY_LINK:
+                _rtn = 9;
+                break;
+            case  HIGHWAY_TRUNK:
+                _rtn = 1;
+                break;
+            case  HIGHWAY_TRUNK_LINK:
+                _rtn = 9;
+                break;
+            case  HIGHWAY_PRIMARY:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_PRIMARY_LINK:
+                _rtn = 8;
+                break;
+            case  HIGHWAY_SECONDARY:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_SECONDARY_LINK:
+                _rtn = 8;
+                break;
+            case  HIGHWAY_TERTIARY:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_TERTIARY_LINK:
+                _rtn = 8;
+                break;
+            case  HIGHWAY_LIVING_STREET:
+                _rtn = 6;
+                break;
+            case  HIGHWAY_RESIDENTIAL:
+                _rtn = 6;
+                break;
+            case  HIGHWAY_UNCLASSIFIED:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_SERVICE:
+                _rtn = 7;
+                break;
+            case  HIGHWAY_TRACK:
+                _rtn = 10;
+                break;
+            case  HIGHWAY_UNKNOWN:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_OTHER:
+                _rtn = 3;
+                break;
+            default:
+                _rtn = 3;
+                break;
+        }
+        return _rtn;
+    }
+
+    //Convert constants to top level for visibility
+    public static int getTopLevel_by_Highway(int highwayType) {
+        int _rtn = 0;
+        switch (highwayType) {
+            case  HIGHWAY_MOTORWAY:
+                _rtn = 6;
+                break;
+            case  HIGHWAY_MOTORWAY_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_TRUNK:
+                _rtn = 6;
+                break;
+            case  HIGHWAY_TRUNK_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_PRIMARY:
+                _rtn = 5;
+                break;
+            case  HIGHWAY_PRIMARY_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_SECONDARY:
+                _rtn = 4;
+                break;
+            case  HIGHWAY_SECONDARY_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_TERTIARY:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_TERTIARY_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_LIVING_STREET:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_RESIDENTIAL:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_UNCLASSIFIED:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_SERVICE:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_TRACK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_UNKNOWN:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_OTHER:
+                _rtn = 2;
+                break;
+            default:
+                _rtn = 2;
+                break;
+        }
+        return _rtn;
+    }
+
+    //Convert constants to road class
+    public static int getClass_by_Highway(int highwayType) {
+        int _rtn = 0;
+        switch (highwayType) {
+            case  HIGHWAY_MOTORWAY:
+                _rtn = 4;
+                break;
+            case  HIGHWAY_MOTORWAY_LINK:
+                _rtn = 4;
+                break;
+            case  HIGHWAY_TRUNK:
+                _rtn = 4;
+                break;
+            case  HIGHWAY_TRUNK_LINK:
+                _rtn = 4;
+                break;
+            case  HIGHWAY_PRIMARY:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_PRIMARY_LINK:
+                _rtn = 3;
+                break;
+            case  HIGHWAY_SECONDARY:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_SECONDARY_LINK:
+                _rtn = 2;
+                break;
+            case  HIGHWAY_TERTIARY:
+                _rtn = 1;
+                break;
+            case  HIGHWAY_TERTIARY_LINK:
+                _rtn = 1;
+                break;
+            case  HIGHWAY_LIVING_STREET:
+                _rtn = 0;
+                break;
+            case  HIGHWAY_RESIDENTIAL:
+                _rtn = 0;
+                break;
+            case  HIGHWAY_UNCLASSIFIED:
+                _rtn = 1;
+                break;
+            case  HIGHWAY_SERVICE:
+                _rtn = 0;
+                break;
+            case  HIGHWAY_TRACK:
+                _rtn = 0;
+                break;
+            case  HIGHWAY_UNKNOWN:
+                _rtn = 0;
+                break;
+            case  HIGHWAY_OTHER:
+                _rtn = 0;
+                break;
+            default:
+                _rtn = 0;
+                break;
+        }
+        return _rtn;
+    }
 }
