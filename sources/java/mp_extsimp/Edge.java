@@ -38,7 +38,7 @@ public class Edge {
     }
 
     public String toString() {
-        return String.format("Num1=%d, Num2=%d", this.node1.VBNum, this.node2.VBNum);
+        return String.format("[Num1=%d, Num2=%d]", this.node1.VBNum, this.node2.VBNum);
     }
 
     //Delete edge and remove all references to it from both nodes

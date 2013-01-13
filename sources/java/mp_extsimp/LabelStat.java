@@ -32,7 +32,9 @@ public class LabelStat {
         //combine all labels from stats
         _rtn = LabelStats.get(0).text;
         //for (i = 1; i <= LabelStatsNum - 1; i++) {
-        for (Iterator<LabelStat> iLabel = LabelStats.iterator(); iLabel.hasNext();) {
+        Iterator<LabelStat> iLabel = LabelStats.iterator();
+        iLabel.next();
+        for (; iLabel.hasNext();) {
             _rtn += "," + iLabel.next().text;
         }
 

@@ -2067,7 +2067,6 @@ if (i > 17) save_MP_2("test_java.mp");
                 Chain = new ArrayList<Node>();
                 Chain.add(nodeJ);
                 Chain.add(nodeI);
-
                 if (nodeI.edgeL.size() != 2) {
                     //chain from one edge
                     chainEnd = true;
@@ -2099,9 +2098,6 @@ if (i > 17) save_MP_2("test_java.mp");
         GoByChain_lastedge = i;
         if (k == node0) {
             //node0 -> check second edge
-            if (node1.edgeL.size() == 1) {
-                System.out.println(node1.VBNum);
-            }
             i = node1.edgeL.get(1);
             k = i.node1;
             if (k == node1) { k = i.node2; }
