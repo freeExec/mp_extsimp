@@ -54,7 +54,11 @@ public class Node {
     public void addEdge(int Id) {
         this.edge[Edges++] = Id;
     }
-*/    
+*/
+    public String toString() {
+        return String.format("Num=%d, id= %d, edges=%d", this.VBNum, this.nodeID, this.edgeL.size());
+    }
+    
     public void addEdge(Edge edgeIn) {
         this.edgeL.add(edgeIn);
     }
@@ -137,11 +141,11 @@ public class Node {
 
     //Merge node2 to node1 with relink of all edges
     public static void mergeNodes(Node node1, Node node2) {
-        mergeNodes(node1, node2, 0);
+        mergeNodes(node1, node2, false);
     }
     
     //flag: 1 - ignore node2 coords (0 - move node1 to average coordinates)
-    public static void mergeNodes(Node node1, Node node2, int flag) {
+    public static void mergeNodes(Node node1, Node node2, boolean flag) {
         int k, i;
         Edge edgeJ;
 
@@ -151,7 +155,7 @@ public class Node {
         //Node node2N = Nodes.get(node2);
         k = node2.edgeL.size();
         
-        for (i = 0; i <= k - 1; i++) {
+        for (i = 0; i < k; i++) {
             //j = node2N.edgeL[i];
             edgeJ = node2.edgeL.get(i);
 
@@ -189,7 +193,7 @@ public class Node {
             if (iEdgeN.node1 == iEdgeN.node2) { iEdgeN.delEdge(); }
         }*/
 
-        if (flag == 1) {
+        if (!flag) {
             //Calc average coordinates
             //TODO: fix (not safe to 180/-180 edge)
             node1.lat = 0.5 * (node1.lat + node2.lat);
