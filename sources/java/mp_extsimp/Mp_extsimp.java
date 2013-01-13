@@ -118,7 +118,7 @@ public class Mp_extsimp {
 
         //output file
         outFile = inputFile + "_opt.mp";
-        outFile2 = inputFile + "_p.mp";  //output2 - for intermediate results
+        //outFile2 = inputFile + "_p.mp";  //output2 - for intermediate results
         
         //start measure time
         time1 = System.currentTimeMillis();
@@ -156,7 +156,7 @@ public class Mp_extsimp {
         //Epsilon = 5 metres
 
         //Save result
-        save_MP_2(outFile2);
+        save_MP_2(outFile);
 
         //'display timing
         System.out.printf("Done %1$tH:%1$tM:%1$tS s", System.currentTimeMillis() - time1);
@@ -986,7 +986,7 @@ autoINCNodesNum -= addedNodes.size();
                         }
     //*TODO:** label found: lSkip2:;
                     }
-    j=1;
+
                     for (j = 1; j < Chain.size(); j++) {
                         Node chainJ_1 = Chain.get(j - 1);
                         Node chainJ = Chain.get(j);
@@ -1094,7 +1094,6 @@ System.out.println("i = " + i);
             //mark edge as checked
             edgeI.mark = 1;
 
-if (i > 17) save_MP_2("test_java.mp");
 //*TODO:** label found: lSkipEdge:;
 
             if ((i & 8191) == 0) {
