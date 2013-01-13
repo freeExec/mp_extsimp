@@ -4,8 +4,9 @@
  */
 package mp_extsimp;
 
-import com.sun.org.apache.xpath.internal.axes.ReverseAxesWalker;
 import java.io.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.*;
 //import com.sun.corba.se.spi.orbutil.fsm.Input;
 //import java.io.BufferedReader;
@@ -95,9 +96,11 @@ public class Mp_extsimp {
     //'
     public static int ClustersFindLastNode = 0;
 
+    public static DecimalFormat numFormat;
+
     
     public static void main(String[] args) {
-        Locale.setDefault(Locale.ENGLISH);
+        //Locale.setDefault(Locale.ENGLISH);
         optimizeRouting(args[0]);
     }
     
@@ -107,6 +110,9 @@ public class Mp_extsimp {
         long time1 = 0;
 
         //System.out.println(String.format("Nod1=0,%d,0\n", 8742));
+        //System.out.println(String.format("%f\n", 8742.547820d));
+        //DecimalFormat nf = new DecimalFormat("0.#######");
+        //System.out.println(nf.format(37.6170351227685d));
         //nothing to do
         if (inputFile.isEmpty()) { return; }
 
@@ -303,7 +309,7 @@ public class Mp_extsimp {
 
                     if (sectionType == 1) {
                         //add ending of section into saved header
-                        MPheader = MPheader + sLine + "\n";
+                        MPheader = MPheader + sLine + "\r\n";
                     }
                     if (waySpeed != -1 && addedNodes.size() > 0 && addedEdges.size() > 0) {
                             Nodes.addAll(addedNodes);
@@ -349,7 +355,7 @@ autoINCNodesNum -= addedNodes.size();
                         }
                         if (sectionType == 1) {
                             //line of header section
-                            MPheader = MPheader + sLine + "\n";
+                            MPheader = MPheader + sLine + "\r\n";
                         }
                 //        break;
                     //scan for routing param
@@ -733,7 +739,7 @@ autoINCNodesNum -= addedNodes.size();
             while (true) {
 //*TODO:** label found: lSkipNode2:;
                 clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
-// TODO                if (clusterNode != null) System.out.println("Node(" + clusterNode.VBNum + ").ID = " + clusterNode.nodeID);
+                if (clusterNode != null) System.out.println("Node(" + clusterNode.VBNum + ").ID = " + clusterNode.nodeID);
                 // System.out.println("k = " + clusterNode.VBNum + " ID=" + clusterNode.nodeID);
                 //next (next time)
                 mode1 = true;
@@ -1075,7 +1081,7 @@ autoINCNodesNum -= addedNodes.size();
                     }*/
                     for(Iterator<Node> iNode = Chain.iterator(); iNode.hasNext();) {
                         Node iNodeN = iNode.next();
-                        Node.mergeNodes(iNodeN.mark, iNodeN, 1);
+                        Node.mergeNodes(iNodeN.mark, iNodeN, true);
                     }
 
                     //update cluster index to include only newly created nodes (i.e. nodes of joined road)
@@ -1088,6 +1094,7 @@ System.out.println("i = " + i);
             //mark edge as checked
             edgeI.mark = 1;
 
+if (i > 17) save_MP_2("test_java.mp");
 //*TODO:** label found: lSkipEdge:;
 
             if ((i & 8191) == 0) {
@@ -1360,11 +1367,11 @@ System.out.println("i = " + i);
         //keep road type for comparing
         roadtype = edge1.roadtype;
 
-        //'mark edges as participating in joining
+        //mark edges as participating in joining
         edge1.mark = 2;
         edge2.mark = 2;
 
-        //'arrow-head of finding chains
+        //arrow-head of finding chains
         edge_side1 = edge1;
         edge_side2 = edge2;
 
@@ -1432,7 +1439,7 @@ System.out.println("i = " + i);
                 Nodes.get(Nodes.size().lon = py + dist[i] * dy * dd;
                 addNode(); */
                 Node addedNode = new Node(-1);
-                addedNode.mark = null;
+                //addedNode.mark = null;
                 addedNode.lat = px + dist[i] * dx * dd;
                 addedNode.lon = py + dist[i] * dy * dd;
                 
@@ -1609,7 +1616,7 @@ System.out.println("i = " + i);
                 //project j node from side1 to middle line
                 dist_t = (side1j.lat - px) * dx + (side1j.lon - py) * dy;
                 Chain.add(side1j);
-                //'old node will collapse to this new one
+                //old node will collapse to this new one
                 side1j.mark = createNode;   //Nodes.get(Nodes.size()-1);
             }
 
@@ -1763,7 +1770,7 @@ System.out.println("i = " + i);
         //prev new node
         i1 = Chain.get(checkindex - 1).mark;
         if (i1 == null) { return; }
-        //'prev-prev new node
+        //prev-prev new node
         i0 = Chain.get(checkindex - 2).mark;
         if (i0 == null) { return; }
 
@@ -1849,7 +1856,7 @@ System.out.println("i = " + i);
             fos = new FileOutputStream(filename);
             bw = new BufferedWriter(new OutputStreamWriter(fos, "CP1251"));
 
-            bw.write("; Generated by mp_extsimp (java)\n");
+            bw.write("; Generated by mp_extsimp (java)\r\n");
             bw.newLine();
             bw.write(MPheader);
             bw.newLine();
@@ -1865,7 +1872,11 @@ System.out.println("i = " + i);
                     kEdgeN.mark = 0;
                 }
             }
-
+            numFormat = new DecimalFormat("0.#######");
+            DecimalFormatSymbols dfs = new DecimalFormatSymbols();
+            dfs.setDecimalSeparator('.');
+            numFormat.setDecimalFormatSymbols(dfs);
+                    
             for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
                 if (kEdgeN.mark == 0) {
@@ -1875,7 +1886,7 @@ System.out.println("i = " + i);
             }
 
             //file finalization flag
-            bw.write("; Completed\n");
+            bw.write("; Completed\r\n");
 
             bw.close();
         } catch (FileNotFoundException ex) {
@@ -1927,7 +1938,7 @@ System.out.println("i = " + i);
             if (nodeJ.edgeL.size() != 2) {
                 //that's all
                 chainEnd = true;
-                result += SaveChainInString(refEdge);
+                result += saveChainInString(refEdge);
         //*TODO:** goto found: GoTo lBreak;
             }
             else {
@@ -1953,7 +1964,7 @@ System.out.println("i = " + i);
             //   k     i     j
 
             //OK, we found end of chain
-            nodeI = nodeK;
+            nodeJ = nodeK;
 
             //   *---------*-----*-----*---...
             //  k=j        i
@@ -1968,7 +1979,7 @@ System.out.println("i = " + i);
             Chain.add(nodeI);
 
             //keep info about first edge in chain
-            refEdge = GoByChain_lastedge;
+            refEdge = new Edge(GoByChain_lastedge);
             GoByChain_lastedge.mark = 1;
             //reversed oneway
             if (refEdge.node1 != Chain.get(0) && refEdge.oneway == 1) { refEdge.oneway = 2; }
@@ -1976,7 +1987,7 @@ System.out.println("i = " + i);
 //*TODO:** label found: lGoNext2:;
 
         while (!chainEnd) {
-            nodeK = goByChain(nodeI, nodeI);
+            nodeK = goByChain(nodeI, nodeJ);
 
             //   *-------------*-----*-----*---...
             //  j              i     k
@@ -2024,7 +2035,7 @@ System.out.println("i = " + i);
     //*TODO:** label found: lBreak:;
             //3) save chain to file
 
-            result += SaveChainInString(refEdge);
+            result += saveChainInString(refEdge);
 
             if (!chainEnd) {
                 //continue with this chain, as it is not ended
@@ -2060,7 +2071,7 @@ System.out.println("i = " + i);
                 if (nodeI.edgeL.size() != 2) {
                     //chain from one edge
                     chainEnd = true;
-                    result += SaveChainInString(refEdge);
+                    result += saveChainInString(refEdge);
                     continue; //break;  // без разницы флаг конца установлен
 
         //*TODO:** goto found: GoTo lBreak;
@@ -2099,31 +2110,31 @@ System.out.println("i = " + i);
         return k;
     }
 
-    private static String SaveChainInString(Edge refEdge) {
+    private static String saveChainInString(Edge refEdge) {
         String result = "";
         //Print #2, "; roadtype=" + CStr(refedge.roadtype) 'debug info about road type
         //Print #2, "[POLYLINE]";
-        result += "[POLYLINE]\n";
+        result += "[POLYLINE]\r\n";
         //object type - from road type
         int typ = Highway.getType_by_Highway(refEdge.roadtype);
         //Print #2, "Type=0x"; Hex(typ);
-        result += String.format("Type=0x%1$X\n", typ);
+        result += String.format("Type=0x%1$X\r\n", typ);
         if (refEdge.label.length() > 0) {
             //labels - into special codes fro labelization
             //Print #2, "Label=~[0x05]" + refEdge.label;
             //Print #2, "StreetDesc=~[0x05]" + refEdge.label;
-            result += "Label=~[0x05]" + refEdge.label + "\n";
-            result += "StreetDesc=~[0x05]" + refEdge.label + "\n";
+            result += "Label=~[0x05]" + refEdge.label + "\r\n";
+            result += "StreetDesc=~[0x05]" + refEdge.label + "\r\n";
         }
         //oneway indicator
         if (refEdge.oneway > 0) {
             //Print #2, "DirIndicator=1";
-            result += "DirIndicator=1\n";
+            result += "DirIndicator=1\r\n";
         }
         //top level of visibility - from road type
         //Print #2, "EndLevel=" + CStr(GetTopLevel_by_Highway(refEdge.roadtype));
         //Print #2, "RouteParam=";
-        result += "EndLevel=" + Highway.getTopLevel_by_Highway(refEdge.roadtype) + "\n";
+        result += "EndLevel=" + Highway.getTopLevel_by_Highway(refEdge.roadtype) + "\r\n";
         result += "RouteParam=";
         //speed class
         //Print #2, CStr(refEdge.speed); ",";
@@ -2141,7 +2152,7 @@ System.out.println("i = " + i);
         }
         //other params are not handled
         //Print #2, "0,0,0,0,0,0,0,0,0";
-        result += "0,0,0,0,0,0,0,0,0\n";
+        result += "0,0,0,0,0,0,0,0,0\r\n";
         //Print #2, "Data0=";
         result += "Data0=";
         if (refEdge.oneway == 2) {
@@ -2150,17 +2161,17 @@ System.out.println("i = " + i);
                 if (i != ChainNum - 1) { Print #2, ","; }
                 Print #2, "("; CStr(Nodes(Chain(i)).lat); ","; CStr(Nodes(Chain(i)).lon); ")";
             }*/
-            for(int i = Chain.size() - 1; i <= 0; i--) {
+            for(int i = Chain.size() - 1; i >= 0; i--) {
                 Node iChain = Chain.get(i);
                 if (i != Chain.size() - 1) { result += ","; }
-                result += String.format("(%.7f,%.7f)", iChain.lat, iChain.lon);
+                result += "(" + numFormat.format(iChain.lat) + "," + numFormat.format(iChain.lon) +")";
             }
             //Print #2,;
-            result += "\n";
+            result += "\r\n";
             //Print #2, "Nod1=0,"; CStr(Chain(ChainNum - 1)); ",0";
             //Print #2, "Nod2=" + CStr(ChainNum - 1) + ","; CStr(Chain(0)); ",0";
-            result += String.format("Nod1=0,%d,0\n", Nodes.indexOf(Chain.get(Chain.size()-1)));
-            result += String.format("Nod2=%d,%d,0\n", Chain.size()-1, Nodes.indexOf(Chain.get(0)));
+            result += String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(Chain.size()-1)));
+            result += String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(0)));
         }
         else {
             //forward oneway or twoway, save in direct sequence
@@ -2175,16 +2186,17 @@ System.out.println("i = " + i);
             for(int i = 0; i < Chain.size(); i++) {
                 Node iChain = Chain.get(i);
                 if (i != 0) { result += ","; }
-                result += String.format("(%.7f,%.7f)", iChain.lat, iChain.lon);
+                //result += String.format("(%.7f,%.7f)", iChain.lat, iChain.lon);
+                result += "(" + numFormat.format(iChain.lat) + "," + numFormat.format(iChain.lon) +")";
             }
-            result += "\n";
-            result += String.format("Nod1=0,%d,0\n", Nodes.indexOf(Chain.get(0)));
-            result += String.format("Nod2=%d,%d,0\n", Chain.size()-1, Nodes.indexOf(Chain.get(Chain.size()-1)));
+            result += "\r\n";
+            result += String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(0)));
+            result += String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(Chain.size()-1)));
         }
         //Print #2, "[END]";
         //Print #2, "";
-        result += "[END]\n";
-        result += "\n";
+        result += "[END]\r\n";
+        result += "\r\n";
 
         return result;
     }
