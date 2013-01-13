@@ -27,6 +27,20 @@ public class Edge {
         this.node2 = node2;
     }
 
+    public Edge(Edge edge) {
+        this.node1 = edge.node1;
+        this.node2 = edge.node2;
+        this.roadtype = edge.roadtype;
+        this.oneway = edge.oneway;
+        this.mark = edge.mark;
+        this.speed = edge.speed;
+        this.label = edge.label;
+    }
+
+    public String toString() {
+        return String.format("Num1=%d, Num2=%d", this.node1.VBNum, this.node2.VBNum);
+    }
+
     //Delete edge and remove all references to it from both nodes
     public void delEdge() { //Node node1) {
         
