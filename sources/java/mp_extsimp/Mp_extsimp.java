@@ -142,17 +142,29 @@ public class Mp_extsimp {
 
         filterVoidEdges();
 
+        //Optimize all roads by (Ramer)Douglas Peucker algorithm
+        douglasPeucker_total_split(5, 100);
+        //Epsilon = 5 metres
+        //Max edge - 100 metres
+
+        collapseJunctions2(1000, 1200, 0.13);
+        //Slide allowed up to 1000 metres
+        //Max junction loop is 1200 metres
+        //0.13 -> ~ 7.46 degress
+
+        filterVoidEdges();
+
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
-//        douglasPeucker_total(5);
+        douglasPeucker_total(5);
         //Epsilon = 5 metres
 
         //Join edges with very acute angle into one
-//        joinAcute(100, 3);
+        joinAcute(100, 3);
         //100 metres for joining nodes
         //AcuteKoeff = 3 => 18.4 degrees
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
-//        douglasPeucker_total(5);
+        douglasPeucker_total(5);
         //Epsilon = 5 metres
 
         //Save result
@@ -2194,5 +2206,238 @@ System.out.println("i = " + i);
         result += "\r\n";
 
         return result;
+    }
+
+    //find and optimize all chains by Douglas-Peucker with Epsilon (in metres) and limiting max edge (in metres)
+    public static void douglasPeucker_total_split(double epsilon, double maxEdge) {
+        for (Iterator<Node> iNode = Nodes.iterator(); iNode.hasNext();) {
+            //mark all nodes as not passed
+            iNode.next().mark = null;
+        }
+        for (Iterator<Node> iNode = Nodes.iterator(); iNode.hasNext();) {
+            Node nodeI = iNode.next();
+            if (nodeI.nodeID == Mark.MARK_NODEID_DELETED  || nodeI.edgeL.size() != 2  || nodeI.mark != null) { // nodeI.mark == 1
+                //*TODO:** goto found: GoTo lSkip;
+            } else {
+            //node: not deleted, not yet passed and with 2 edges -> should be checked for chain
+                douglasPeucker_chain_split(nodeI, epsilon, maxEdge);
+            }
+//*TODO:** label found: lSkip:;
+/*            if ((i & 8191) == 0) {
+                //show progress
+                Form1.Caption = "Doug-Pek sp " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
+            }*/
+        }
+    }
+
+    //find one chain (starting from node1) and optimize it by Douglas-Peucker with Epsilon (in metres) and limiting edge len by MaxEdge
+    // Ну ооочень похоже на SaveChain
+    public static void douglasPeucker_chain_split(Node node1, double epsilon, double maxEdge) {
+        Node nodeI, nodeJ, nodeK;
+        Edge refEdge;
+        boolean chainEnd = false;
+        Edge nextChainEdge = null;
+        int m;
+
+        //Algorithm works as DouglasPeucker_chain above
+        //difference is only inside OptimizeByDouglasPeucker_One_split
+
+        //1) go by chain to the one end - to node with !=2 edges
+
+        //start node
+        nodeI = node1;
+        nodeJ = node1;
+//*TODO:** label found: lGoNext:;
+        while (true) {
+            //go by chain
+            nodeK = goByChain(nodeI, nodeJ);
+            //'if still 2 edges - proceed
+            if (nodeK != node1 && nodeK.edgeL.size() == 2) {
+                nodeJ = nodeI; nodeI = nodeK;
+                //GoTo lGoNext;
+            } else { break; }
+        }
+        //   *-----*-----*-----*---...
+        //   k     i     j
+
+        //OK, we found end of chain
+        nodeJ = nodeK;
+
+        //   *---------*-----*-----*---...
+        //  k=j        i
+
+        //2) go revert - from found end to another one and saving all nodes into Chain() array
+
+        //ChainNum = 0;
+        Chain = new ArrayList<Node>();
+        //addChain(k);
+        //addChain(i);
+        Chain.add(nodeK);
+        Chain.add(nodeI);
+
+        //keep info about first edge in chain
+        refEdge = new Edge(GoByChain_lastedge);
+        //reversed oneway
+        if (refEdge.node1 != Chain.get(0) && refEdge.oneway == 1) { refEdge.oneway = 2; }
+
+//*TODO:** label found: lGoNext2:;
+        while (!chainEnd) {
+            nodeK = goByChain(nodeI, nodeJ);
+
+            //   *-------------*-----*-----*---...
+            //  j              i     k
+
+            //check oneway
+            m = GoByChain_lastedge.oneway;
+            if (m > 0 && GoByChain_lastedge.node1 != nodeI) { m = 2; }
+
+            //if oneway flag is differnt or road type is changed - break chain
+            if (m != refEdge.oneway) {
+                nextChainEdge = GoByChain_lastedge;
+        //GoTo lBreak;
+            }
+            if (GoByChain_lastedge.roadtype != refEdge.roadtype) {
+                nextChainEdge = GoByChain_lastedge;
+        //GoTo lBreak;
+            }
+
+            if (nextChainEdge != GoByChain_lastedge) {
+                Chain.add(nodeK);
+
+                if (nodeK != Chain.get(0) && nodeK.edgeL.size() == 2) {
+                    //still 2 edges - still chain
+                    nodeK.mark = new Node(-1);
+                        nodeJ = nodeI;
+                        nodeI = nodeK;
+                        continue;
+            //*TODO:** goto found: GoTo lGoNext2;
+                } else {
+                    chainEnd = true;
+                }
+            }
+
+//*TODO:** label found: lBreak:;
+
+            //3) optimize found chain by D-P
+            optimizeByDouglasPeucker_One_split(0, ChainNum - 1, epsilon, refedge, maxEdge);
+
+            if (!chainEnd) {
+                //continue with this chain, as it is not ended
+
+                //   *================*--------------------*-----------*-----*---...
+                //                        NextChainEdge
+
+                //new reference info
+                refEdge = nextChainEdge;
+                if (refEdge.node1 == Chain.get(Chain.size()-1)) {
+                    nodeI = refEdge.node2;
+                    nodeJ = refEdge.node1;
+                }
+                else {
+                    if (refEdge.oneway == 1) { refEdge.oneway = 2; }
+                    nodeI = refEdge.node1;
+                    nodeJ = refEdge.node2;
+                }
+
+                //   *================*--------------------*-----------*-----*---...
+                //                    j                    i
+
+                //chain from one edge - nothing to optimize by D-P
+                if (nodeI.edgeL.size() != 2) { return; }
+
+                //add both nodes of last edge
+                Chain = new ArrayList<Node>();
+                Chain.add(nodeJ);
+                Chain.add(nodeI);
+
+                nextChainEdge = null;
+
+                //continue with chain
+        //*TODO:** goto found: GoTo lGoNext2;
+            }
+        }
+    }
+
+    //Recursive check to optimize chain/subchain by Douglas-Peucker with Epsilon (in metres) and limiting edge len by MaxEdge
+    //subchain is defined by IndexStart,IndexLast
+    //refEdge - road parameters of chain (for create new edge in case of optimization)
+    //(180/-180 safe)
+    private static void optimizeByDouglasPeucker_One_split(int indexStart, int indexLast, double epsilon, Edge refEdge, double maxEdge) {
+        int i = 0;
+        int farestIndex = 0;
+        double farestDist = 0;
+        double dist = 0;
+        double k = 0;
+        double scalarMult = 0;
+        int newspeed = 0;
+        String newlabel = "";
+
+        //'one edge (or less) -> nothing to do
+        if (((indexStart + 1) >= indexLast)) { return; }
+
+        //'distance between subchain edge
+        k = distance(Chain[indexStart], Chain[indexLast]);
+
+        //find node, farest from line first-last node (farer than Epsilon)
+        //'start max len - Epsilon
+        farestDist = epsilon;
+        //'nothing yet found
+        farestIndex = -1;
+        for (i = indexStart + 1; i <= indexLast - 1; i++) {
+            if (k == 0) {
+                //circled subchain
+                dist = distance(Chain[i], Chain[indexStart]);
+            }
+            else {
+                dist = distanceToSegment(Chain[indexStart], Chain[indexLast], Chain[i]);
+            }
+            if (dist > farestDist) {
+                farestDist = Dist: farestIndex == i;
+            }
+
+            if (distance(Chain[i], Chain[indexStart]) > maxEdge) {
+                //distance from start to this node is more than limit -> we should keep this node
+                farestIndex = i;
+                //*TODO:** goto found: GoTo lKeepFar;
+            }
+        }
+
+        if (farestIndex == -1) {
+            //farest node not found -> all distances less than Epsilon -> remove all internal nodes
+
+            //calc speed and label from all subchain edges
+            estimateChain(indexStart, indexLast);
+            newspeed = EstimateChain_speed;
+            newlabel = EstimateChain_label;
+
+            for (i = indexStart + 1; i <= indexLast - 1; i++) {
+                //'kill with edges
+                delNode(Chain[i]);
+            }
+
+            //join first and last nodes by new edge
+            if (refedge..oneway == 2) {
+                //reversed oneway
+                i = joinByEdge(Chain[indexLast], Chain[indexStart]);
+                Edges[i]..oneway = 1;
+            }
+            else {
+                i = joinByEdge(Chain[indexStart], Chain[indexLast]);
+                Edges[i]..oneway = refedge..oneway;
+            }
+            Edges[i]..roadtype = refedge..roadtype;
+            Edges[i]..speed = newspeed;
+            Edges[i]..label = newlabel;
+
+            return;
+        }
+
+        //*TODO:** label found: lKeepFar:;
+        //farest point found - keep it
+        //call Douglas-Peucker for two new subchains
+        //'Douglas-Peucker for two new subchains
+        optimizeByDouglasPeucker_One_split(indexStart, farestIndex, epsilon, refedge, maxEdge);
+        optimizeByDouglasPeucker_One_split(farestIndex, indexLast, epsilon, refedge, maxEdge);
+
     }
 }
