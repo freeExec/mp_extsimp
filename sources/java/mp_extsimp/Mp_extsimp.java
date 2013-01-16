@@ -159,7 +159,7 @@ public class Mp_extsimp {
         //Max junction loop is 1200 metres
         //0.13 -> ~ 7.46 degress
 
-        filterVoidEdges();
+//        filterVoidEdges();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
 //        douglasPeucker_total(5);
@@ -760,7 +760,7 @@ autoINCNodesNum -= addedNodes.size();
             while (true) {
 //*TODO:** label found: lSkipNode2:;
                 clusterNode = getNodeInBboxByCluster(bbox_edge, mode1);
-                if (clusterNode != null) System.out.println("Node(" + clusterNode.VBNum + ").ID = " + clusterNode.nodeID);
+                //if (clusterNode != null) System.out.println("Node(" + clusterNode.VBNum + ").ID = " + clusterNode.nodeID);
                 // System.out.println("k = " + clusterNode.VBNum + " ID=" + clusterNode.nodeID);
                 //next (next time)
                 mode1 = true;
@@ -1111,7 +1111,7 @@ autoINCNodesNum -= addedNodes.size();
     //*TODO:** label found: lSkipDel:;
                 }
             }
-System.out.println("i = " + i);
+//System.out.println("i = " + i);
             //mark edge as checked
             edgeI.mark = 1;
 
@@ -2219,9 +2219,9 @@ System.out.println("i = " + i);
 
     //find and optimize all chains by Douglas-Peucker with Epsilon (in metres) and limiting max edge (in metres)
     public static void douglasPeucker_total_split(double epsilon, double maxEdge) {
-        for (Iterator<Node> iNode = Nodes.iterator(); iNode.hasNext();) {
+        for (Node nodeI : Nodes) {
             //mark all nodes as not passed
-            iNode.next().mark = null;
+            nodeI.mark = null;
         }
         for (Node nodeI : Nodes) {
             if (nodeI.nodeID == Mark.MARK_NODEID_DELETED  || nodeI.edgeL.size() != 2  || nodeI.mark != null) { // nodeI.mark == 1
@@ -2431,11 +2431,11 @@ System.out.println("i = " + i);
             //join first and last nodes by new edge
             if (refEdge.oneway == 2) {
                 //reversed oneway
-                edgeI = Edge.joinByEdge(nodeLast, nodeStart);
+                edgeI = joinByEdge(nodeLast, nodeStart);
                 edgeI.oneway = 1;
             }
             else {
-                edgeI = Edge.joinByEdge(nodeStart, nodeLast);
+                edgeI = joinByEdge(nodeStart, nodeLast);
                 edgeI.oneway = refEdge.oneway;
             }
             edgeI.roadtype = refEdge.roadtype;
