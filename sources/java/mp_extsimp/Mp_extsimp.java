@@ -71,6 +71,9 @@ public class Mp_extsimp {
 
     //case of calc distance during last call of DistanceToSegment()
     public static int DistanceToSegment_last_case = 0;
+
+    //histogramm of speed classes
+    public static int[] SpeedHistogram;
     
 //Cluster index
     //'min lat-border of clusters
@@ -98,6 +101,10 @@ public class Mp_extsimp {
 
     public static DecimalFormat numFormat;
 
+    //speed of chain after last call of EstimateChain()
+    public static int EstimateChain_speed = 0;
+    //label of chain after last call of EstimateChain()
+    public static String EstimateChain_label = "";
     
     public static void main(String[] args) {
         //Locale.setDefault(Locale.ENGLISH);
@@ -147,7 +154,7 @@ public class Mp_extsimp {
         //Epsilon = 5 metres
         //Max edge - 100 metres
 
-        collapseJunctions2(1000, 1200, 0.13);
+//        collapseJunctions2(1000, 1200, 0.13);
         //Slide allowed up to 1000 metres
         //Max junction loop is 1200 metres
         //0.13 -> ~ 7.46 degress
@@ -155,16 +162,16 @@ public class Mp_extsimp {
         filterVoidEdges();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
-        douglasPeucker_total(5);
+//        douglasPeucker_total(5);
         //Epsilon = 5 metres
 
         //Join edges with very acute angle into one
-        joinAcute(100, 3);
+//        joinAcute(100, 3);
         //100 metres for joining nodes
         //AcuteKoeff = 3 => 18.4 degrees
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
-        douglasPeucker_total(5);
+//        douglasPeucker_total(5);
         //Epsilon = 5 metres
 
         //Save result
@@ -204,6 +211,8 @@ public class Mp_extsimp {
         TWforwNum = 0;*/
         TWforw = new ArrayList<Edge>();
         TWback = new ArrayList<Edge>();
+
+        SpeedHistogram = new int[10];
     }
 
     //Load .mp file
@@ -2319,7 +2328,8 @@ System.out.println("i = " + i);
 //*TODO:** label found: lBreak:;
 
             //3) optimize found chain by D-P
-            optimizeByDouglasPeucker_One_split(0, ChainNum - 1, epsilon, refedge, maxEdge);
+            //optimizeByDouglasPeucker_One_split(0, ChainNum - 1, epsilon, refEdge, maxEdge);
+            optimizeByDouglasPeucker_One_split(Chain.get(0), Chain.get(Chain.size()), epsilon, refEdge, maxEdge);
 
             if (!chainEnd) {
                 //continue with this chain, as it is not ended
@@ -2362,47 +2372,51 @@ System.out.println("i = " + i);
     //subchain is defined by IndexStart,IndexLast
     //refEdge - road parameters of chain (for create new edge in case of optimization)
     //(180/-180 safe)
-    private static void optimizeByDouglasPeucker_One_split(int indexStart, int indexLast, double epsilon, Edge refEdge, double maxEdge) {
+    private static void optimizeByDouglasPeucker_One_split(Node nodeStart, Node nodeLast, double epsilon, Edge refEdge, double maxEdge) {
         int i = 0;
-        int farestIndex = 0;
+        Node farestNode = null;
         double farestDist = 0;
         double dist = 0;
         double k = 0;
         double scalarMult = 0;
         int newspeed = 0;
         String newlabel = "";
+        int indexStart = Chain.indexOf(nodeStart);
+        int indexLast = Chain.indexOf(nodeLast);
 
-        //'one edge (or less) -> nothing to do
+        //one edge (or less) -> nothing to do
         if (((indexStart + 1) >= indexLast)) { return; }
 
-        //'distance between subchain edge
-        k = distance(Chain[indexStart], Chain[indexLast]);
+        //distance between subchain edge
+        k = Node.distance(nodeStart, nodeLast);
 
         //find node, farest from line first-last node (farer than Epsilon)
-        //'start max len - Epsilon
+        //start max len - Epsilon
         farestDist = epsilon;
-        //'nothing yet found
-        farestIndex = -1;
-        for (i = indexStart + 1; i <= indexLast - 1; i++) {
+        //nothing yet found
+        for (i = indexStart + 1; i < indexLast; i++) {
+            Node nodeI = Chain.get(i);
             if (k == 0) {
                 //circled subchain
-                dist = distance(Chain[i], Chain[indexStart]);
+                dist = Node.distance(nodeI, nodeStart);
             }
             else {
-                dist = distanceToSegment(Chain[indexStart], Chain[indexLast], Chain[i]);
+                dist = Node.distanceToSegment(nodeStart, nodeLast, nodeI);
             }
             if (dist > farestDist) {
-                farestDist = Dist: farestIndex == i;
+                farestDist = dist; farestNode = nodeI;
             }
 
-            if (distance(Chain[i], Chain[indexStart]) > maxEdge) {
+            if (Node.distance(nodeI, nodeStart) > maxEdge) {
                 //distance from start to this node is more than limit -> we should keep this node
-                farestIndex = i;
-                //*TODO:** goto found: GoTo lKeepFar;
+                farestNode = nodeI;
+    //*TODO:** goto found: GoTo lKeepFar;
+                // т.к. farestNode != null след. условие пропускается и переходим как раз на нужную метку
+                break;
             }
         }
 
-        if (farestIndex == -1) {
+        if (farestNode == null) {
             //farest node not found -> all distances less than Epsilon -> remove all internal nodes
 
             //calc speed and label from all subchain edges
@@ -2410,34 +2424,61 @@ System.out.println("i = " + i);
             newspeed = EstimateChain_speed;
             newlabel = EstimateChain_label;
 
-            for (i = indexStart + 1; i <= indexLast - 1; i++) {
-                //'kill with edges
-                delNode(Chain[i]);
+            for (i = indexStart + 1; i < indexLast; i++) {
+                //kill with edges
+                Chain.get(i).delNode();
             }
-
+            Edge edgeI;
             //join first and last nodes by new edge
-            if (refedge..oneway == 2) {
+            if (refEdge.oneway == 2) {
                 //reversed oneway
-                i = joinByEdge(Chain[indexLast], Chain[indexStart]);
-                Edges[i]..oneway = 1;
+                edgeI = Edge.joinByEdge(nodeLast, nodeStart);
+                edgeI.oneway = 1;
             }
             else {
-                i = joinByEdge(Chain[indexStart], Chain[indexLast]);
-                Edges[i]..oneway = refedge..oneway;
+                edgeI = Edge.joinByEdge(nodeStart, nodeLast);
+                edgeI.oneway = refEdge.oneway;
             }
-            Edges[i]..roadtype = refedge..roadtype;
-            Edges[i]..speed = newspeed;
-            Edges[i]..label = newlabel;
+            edgeI.roadtype = refEdge.roadtype;
+            edgeI.speed = (byte)newspeed;
+            edgeI.label = newlabel;
 
             return;
         }
 
-        //*TODO:** label found: lKeepFar:;
+//*TODO:** label found: lKeepFar:;
         //farest point found - keep it
         //call Douglas-Peucker for two new subchains
-        //'Douglas-Peucker for two new subchains
-        optimizeByDouglasPeucker_One_split(indexStart, farestIndex, epsilon, refedge, maxEdge);
-        optimizeByDouglasPeucker_One_split(farestIndex, indexLast, epsilon, refedge, maxEdge);
+        //Douglas-Peucker for two new subchains
+        optimizeByDouglasPeucker_One_split(nodeStart, farestNode, epsilon, refEdge, maxEdge);
+        optimizeByDouglasPeucker_One_split(farestNode, nodeLast, epsilon, refEdge, maxEdge);
 
+    }
+
+    //Calc speedclass and label of combined subchain of edges
+    public static void estimateChain(int indexStart, int indexLast) {
+
+        for (int i = 0; i <= 10; i++) {
+            SpeedHistogram[i] = 0;
+        }
+
+        EstimateChain_label = "";
+        EstimateChain_speed = 0;
+        resetLabelStats();
+
+        for (int i = indexStart; i < indexLast; i++) {
+            Edge edgeJ = Edge.getEdgeBetween(Chain.get(i), Chain.get(i + 1));
+            if (edgeJ != null) {
+                //add label of edge into stats
+                addLabelStat0(edgeJ.label);
+                //add speed into histogram
+                SpeedHistogram[edgeJ.speed]++;
+            }
+        }
+
+        //estimate speed
+        EstimateChain_speed = Highway.estimateSpeedByHistogram(SpeedHistogram);
+        //calc resulting label
+        EstimateChain_label = getLabelByStats(0);
     }
 }

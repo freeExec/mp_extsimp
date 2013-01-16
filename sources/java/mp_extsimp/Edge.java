@@ -172,4 +172,16 @@ public class Edge {
         if (d2 < d1) { d1 = d2; }
         return d1;
     }
+
+    //Get edge, conecting node1 and node2, return -1 if no connection
+    //TODO(opt): swap node1 and node2 if node2 have smaller edges
+    public static Edge getEdgeBetween(Node node1, Node node2) {
+        for (Edge edgeJ: node1.edgeL) {
+            if (edgeJ.node1 == node2  || edgeJ.node2 == node2) {
+                //found
+                return edgeJ;
+            }
+        }
+        return null;
+    }
 }
