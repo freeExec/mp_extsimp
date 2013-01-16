@@ -289,7 +289,7 @@ public class Highway {
     //Estimate speed class of road by histogram
     public static int estimateSpeedByHistogram(int[] SpeedHistogram) {
         int total = 0;
-
+        int _ret;
         //call total sum
         for (int shI: SpeedHistogram) {
             total += shI;
@@ -299,40 +299,48 @@ public class Highway {
         if (total == 0) { return 3; }        //default speedclass
 
         //find speedclass with 90% coverage
+        _ret = 0;
         for (int shI: SpeedHistogram) {
             if (shI > total * 0.9) {
                 //90% of chain have this speedclass
-                return shI;
+                return _ret;
             }
+            _ret++;
         }
 
         //no 90%
 
         //find minimum speedclass with 40% coverage
+        _ret = 0;
         for (int shI: SpeedHistogram) {
             if (shI > total * 0.4) {
                 //40% of chain have this speedclass
-                return shI;
+                return _ret;
             }
+            _ret++;
         }
 
         //no 40% (very much alike will not happens)
 
         //find minimum speedclass with 10% coverage
+        _ret = 0;
         for (int shI: SpeedHistogram) {
             if (shI > total * 0.1) {
                 //10% of chain have this speedclass
-                return shI;
+                return _ret;
             }
+            _ret++;
         }
 
         //no 10% (almost impossible)
 
         //find minimum speedclass with >0 coverage
+        _ret = 0;
         for (int shI: SpeedHistogram) {
             if (shI > 0) {
-                return shI;
+                return _ret;
             }
+            _ret++;
         }
 
         return 3;

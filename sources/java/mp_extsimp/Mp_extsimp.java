@@ -212,7 +212,7 @@ public class Mp_extsimp {
         TWforw = new ArrayList<Edge>();
         TWback = new ArrayList<Edge>();
 
-        SpeedHistogram = new int[10];
+        SpeedHistogram = new int[11];
     }
 
     //Load .mp file
@@ -2223,8 +2223,7 @@ System.out.println("i = " + i);
             //mark all nodes as not passed
             iNode.next().mark = null;
         }
-        for (Iterator<Node> iNode = Nodes.iterator(); iNode.hasNext();) {
-            Node nodeI = iNode.next();
+        for (Node nodeI : Nodes) {
             if (nodeI.nodeID == Mark.MARK_NODEID_DELETED  || nodeI.edgeL.size() != 2  || nodeI.mark != null) { // nodeI.mark == 1
                 //*TODO:** goto found: GoTo lSkip;
             } else {
@@ -2316,9 +2315,9 @@ System.out.println("i = " + i);
                 if (nodeK != Chain.get(0) && nodeK.edgeL.size() == 2) {
                     //still 2 edges - still chain
                     nodeK.mark = new Node(-1);
-                        nodeJ = nodeI;
-                        nodeI = nodeK;
-                        continue;
+                    nodeJ = nodeI;
+                    nodeI = nodeK;
+                    continue;
             //*TODO:** goto found: GoTo lGoNext2;
                 } else {
                     chainEnd = true;
@@ -2329,7 +2328,7 @@ System.out.println("i = " + i);
 
             //3) optimize found chain by D-P
             //optimizeByDouglasPeucker_One_split(0, ChainNum - 1, epsilon, refEdge, maxEdge);
-            optimizeByDouglasPeucker_One_split(Chain.get(0), Chain.get(Chain.size()), epsilon, refEdge, maxEdge);
+            optimizeByDouglasPeucker_One_split(Chain.get(0), Chain.get(Chain.size() - 1), epsilon, refEdge, maxEdge);
 
             if (!chainEnd) {
                 //continue with this chain, as it is not ended
