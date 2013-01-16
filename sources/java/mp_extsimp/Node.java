@@ -37,7 +37,7 @@ public class Node {
     public ArrayList<Edge> edgeL;   //all edges (values - indexes in Edges array)
     //public int Edges;      //number of edges, -1 means "not counted"
     public Node markNode;       //internal marker for all-network algo-s
-    public Mark mark;       //internal marker for all-network algo-s
+    public int mark;       //internal marker for all-network algo-s
     public double temp_dist;//internal value for for all-network algo-s
 
     // TODO Debug <-> VB
