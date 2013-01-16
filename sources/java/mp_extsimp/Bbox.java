@@ -26,6 +26,17 @@ public class Bbox {
     public double lon_min;
     public double lon_max;
 
+    public Bbox() {
+
+    }
+
+    public Bbox(double lat_min, double lat_max, double lon_min, double lon_max) {
+        this.lat_min = lat_min;
+        this.lat_max = lat_max;
+        this.lon_min = lon_min;
+        this.lon_max = lon_max;
+    }
+
     //Expand bounding box by distance in metres
     public static Bbox expandBbox(Bbox bbox1, double dist) { // TODO: Use of ByRef founded
         double cos1 = 0;
