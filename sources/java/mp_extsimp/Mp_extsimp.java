@@ -45,9 +45,7 @@ public class Mp_extsimp {
     private static int ChainNum = 0;*/
     
     //Aim edges
-    private static aimedge[] AimEdges;
-    private static int AimEdgesAlloc = 0;
-    private static int AimEdgesNum = 0;    
+    private static ArrayList<AimEdge> AimEdges;
     
     //Label statistics, for estimate labels of joined roads
     private static ArrayList<LabelStat> LabelStats;
@@ -185,32 +183,30 @@ public class Mp_extsimp {
     private static void InitArrays() {
         //NodesAlloc = 1000;
         //Nodes = new node[NodesAlloc];
-        Nodes = new ArrayList<Node>();
+        Nodes = new ArrayList<>();
         //NodesNum = 0;   -> Nodes.size();
 
         //EdgesAlloc = 1000;
         //Edges = new edge[EdgesAlloc];
-        Edges = new ArrayList<Edge>();
+        Edges = new ArrayList<>();
         //EdgesNum = 0;
 
-        Chain = new ArrayList<Node>();
+        Chain = new ArrayList<>();
         /* ChainAlloc = 1000;
         Chain = new int[ChainAlloc];
         ChainNum = 0;*/
 
-        AimEdgesAlloc = 50;
-        AimEdges = new aimedge[AimEdgesAlloc];
-        AimEdgesNum = 0;
+        //AimEdges = new ArrayList<>();
 
-        LabelStats = new ArrayList<LabelStat>();
+        LabelStats = new ArrayList<>();
 
         /*TWalloc = 100;
         TWforw = new int[TWalloc];
         TWback = new int[TWalloc];
         TWbackNum = 0;
         TWforwNum = 0;*/
-        TWforw = new ArrayList<Edge>();
-        TWback = new ArrayList<Edge>();
+        TWforw = new ArrayList<>();
+        TWback = new ArrayList<>();
 
         SpeedHistogram = new int[11];
     }
@@ -2510,270 +2506,280 @@ autoINCNodesNum -= addedNodes.size();
         //then all collapsing edges deleted, all nodes - joined into centroid
         //then algorithm reiterates from start till no junction were found
 
-//*TODO:** label found: lIteration:;
+// label found: lIteration:;
+        while (true) {
+            //mark all as not-yet-joining
+            for (Node nodeI: Nodes) {
+                //no wave
+                nodeI.mark = 0;
+                //no wave
+                nodeI.temp_dist = 0;
+            }
 
-        //mark all as not-yet-joining
-        for (Node nodeI: Nodes) {
-            //no wave
-            nodeI.mark = 0;
-            //no wave
-            nodeI.temp_dist = 0;
-        }
-
-        //1) Mark all potential parts of junctions
-        for (Edge edgeI: Edges) {
-            //not checked
-            edgeI.mark = 0;
-            if (edgeI.node1 != null) {
-                if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) != 0) {
-                    //all links are parts of junctions
-                    edgeI.mark = Mark.MARK_JUNCTION;
+            //1) Mark all potential parts of junctions
+            for (Edge edgeI: Edges) {
+                //not checked
+                edgeI.mark = 0;
+                if (edgeI.node1 != null) {
+                    if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) != 0) {
+                        //all links are parts of junctions
+                        edgeI.mark = Mark.MARK_JUNCTION;
+                    }
                 }
             }
-        }
 
-        for (Edge edgeI: Edges) {
-            if (edgeI.node1 != null) {
-                //check all edges (not links) for short loops
-                //all short loops also marked as part of junctions
+            for (Edge edgeI: Edges) {
+                if (edgeI.node1 != null) {
+                    //check all edges (not links) for short loops
+                    //all short loops also marked as part of junctions
 
-                if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) == 0  && (edgeI.mark & Mark.MARK_JUNCTION) == 0) {
-                    //not _link, not yet marked junction
-                    //not marked distcheck -> should check it
-                    if ((edgeI.mark & Mark.MARK_DISTCHECK) == 0) { checkShortLoop2(edgeI, loopLimit); }
+                    if ((edgeI.roadtype & Highway.HIGHWAY_MASK_LINK) == 0  && (edgeI.mark & Mark.MARK_JUNCTION) == 0) {
+                        //not _link, not yet marked junction
+                        //not marked distcheck -> should check it
+                        if ((edgeI.mark & Mark.MARK_DISTCHECK) == 0) { checkShortLoop2(edgeI, loopLimit); }
+                    }
                 }
+                /*if ((i && 65535) == 0) {
+                    //display progress
+                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Shorts " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
+                }*/
             }
-            /*if ((i && 65535) == 0) {
-                //display progress
-                Form1.Caption = "Collapse " + CStr(passNumber) + ", Shorts " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-            }*/
-        }
 
-        for (Node nodeI: Nodes) {
-            //not in join group
-            nodeI.mark = 0;
-        }
+            for (Node nodeI: Nodes) {
+                //not in join group
+                nodeI.mark = 0;
+            }
 
-        //2) mark edges by trying to shrink junction
-        joinGroups = 0;
-        for (Node nodeI: Nodes) {
-            if (nodeI.nodeID != Mark.MARK_NODEID_DELETED  && nodeI.mark == 0) {
-                //not deleted node, not marked yet -> should check
+            //2) mark edges by trying to shrink junction
+            joinGroups = 0;
+            for (Node nodeI: Nodes) {
+                if (nodeI.nodeID != Mark.MARK_NODEID_DELETED  && nodeI.mark == 0) {
+                    //not deleted node, not marked yet -> should check
 
-                //start new group
-                //ChainNum = 0;
-                Chain = new ArrayList<Node>();
-                borderNodes = nodeI;    // далее он ссылается на Chain(borderNode), а я его только что обнулил и добавляю
-                //add this node to a chain
-                Chain.add(nodeI);
+                    //start new group
+                    //ChainNum = 0;
+                    Chain = new ArrayList<Node>();
+                    borderNodes = nodeI;    // далее он ссылается на Chain(borderNode), а я его только что обнулил и добавляю
+                    //add this node to a chain
+                    Chain.add(nodeI);
 
-                //check all edges of node for collapsing
-                checkForCollapeByChain2(Chain.get(0));
+                    //check all edges of node for collapsing
+                    checkForCollapeByChain2(Chain.get(0));
 
-                //node is border-node
-                //if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
-
-                int j = 1;
-                if (Chain.size() > 1) {
                     //node is border-node
-                    // перенес сюда, т.к. Chain(1) может и не существовать, но если так, то borderNodes далее не используется
-                    if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
-                    //at least 2 nodes found to collapse
+                    //if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
 
-//*TODO:** label found: lRecheckAgain:;
-                    //continue to check all edges of added nodes by chain
-                    while (j < Chain.size()) {
-                        Node nodeJ = Chain.get(j);
-                        checkForCollapeByChain2(nodeJ);
+                    int j = 1;
+                    if (Chain.size() > 1) {
+                        //node is border-node
+                        // перенес сюда, т.к. Chain(1) может и не существовать, но если так, то borderNodes далее не используется
+                        if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
+                        //at least 2 nodes found to collapse
 
-                        if (nodeJ.mark == Mark.MARK_NODE_BORDER) {
-                            //border-node found - move it to start of chain (by swap)
-                            Node nodeK = borderNodes;
-                            borderNodes = nodeJ;
-                            nodeJ = nodeK;
+    // label found: lRecheckAgain:;
+                        while (true) {
+                            //continue to check all edges of added nodes by chain
+                            while (j < Chain.size()) {
+                                Node nodeJ = Chain.get(j);
+                                checkForCollapeByChain2(nodeJ);
 
-                            borderNodes = Chain.get(Chain.indexOf(borderNodes) + 1);
+                                if (nodeJ.mark == Mark.MARK_NODE_BORDER) {
+                                    //border-node found - move it to start of chain (by swap)
+                                    Node nodeK = borderNodes;
+                                    borderNodes = nodeJ;
+                                    nodeJ = nodeK;
+
+                                    borderNodes = Chain.get(Chain.indexOf(borderNodes) + 1);
+                                }
+                                j = j + 1;
+                            }
+
+                            if (borderNodes != Chain.get(0)) {
+                                //if border-nodes found - shrink whole construction by sliding border-nodes by geometry
+                                shrinkBorderNodes(borderNodes, slideMaxDist);
+                                borderNodes = Chain.get(0);
+                    // goto found: GoTo lRecheckAgain;
+                            } else { break; }
                         }
+                        //mark all found nodes
+                        for (Node chainJ: Chain) {
+                            chainJ.mark = Mark.MARK_NODE_OF_JUNCTION;
+                        }
+                    }
+                }
+                /*if ((i && 8191) == 0) {
+                    //show progress
+                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Shrink " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
+                }*/
+            }
+
+            //3) group edges to separate junctions
+            joinGroups = 0;
+            for (Node nodeI: Nodes) {
+                if (nodeI.mark == Mark.MARK_NODE_OF_JUNCTION) {
+                    Chain = new ArrayList<Node>();
+                    //add this node to a chain
+                    Chain.add(nodeI);
+                    int j = 0;
+                    while (j < Chain.size()) {
+                        //check all edges and add their other ends if they are collapsing
+                        groupCollapse(Chain.get(j));
                         j = j + 1;
                     }
 
-                    if (borderNodes != Chain.get(0)) {
-                        //if border-nodes found - shrink whole construction by sliding border-nodes by geometry
-                        shrinkBorderNodes(borderNodes, slideMaxDist);
-                        borderNodes = Chain.get(0);
-            //*TODO:** goto found: GoTo lRecheckAgain;
-                    }
-
-                    //mark all found nodes
-                    for (Node chainJ: Chain) {
-                        chainJ.mark = Mark.MARK_NODE_OF_JUNCTION;
+                    if (Chain.size() > 1) {
+                        //2 or more found - new group
+                        for (Node chainJ: Chain) {
+                            chainJ.mark = joinGroups;
+                        }
+                        joinGroups = joinGroups + 1;
                     }
                 }
             }
-            /*if ((i && 8191) == 0) {
-                //show progress
-                Form1.Caption = "Collapse " + CStr(passNumber) + ", Shrink " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-            }*/
-        }
 
-        //3) group edges to separate junctions
-        joinGroups = 0;
-        for (Node nodeI: Nodes) {
-            if (nodeI.mark == Mark.MARK_NODE_OF_JUNCTION) {
-                Chain = new ArrayList<Node>();
-                //add this node to a chain
-                Chain.add(nodeI);
-                int j = 0;
-                while (j < Chain.size()) {
-                    //check all edges and add their other ends if they are collapsing
-                    groupCollapse(Chain.get(j));
-                    j = j + 1;
+            //4) calculate coordinates of centroid for collapsed junction
+
+            //G.redim(joinedNode, joinGroups);
+            //G.redim(joinGroupBox, joinGroups);
+            ArrayList<Node> joinedNode = new ArrayList<>(joinGroups);
+            ArrayList<Bbox> joinGroupBox = new ArrayList<>(joinGroups);
+
+            //Create nodes for all found join-groups
+            for (int i = 0; i <= joinGroups; i++) {
+                Node addedNode = new Node(-1);
+                addedNode.mark = -1;
+                //fake coords, so cluster-index algo will not get (0,0) coords
+                addedNode.lat = Nodes.get(0).lat;
+                addedNode.lon = Nodes.get(0).lon;
+                Nodes.add(addedNode);
+                joinedNode.add(addedNode);
+                Bbox addedBox = new Bbox(360, -360, 360, -360);
+                joinGroupBox.add(addedBox);
+            }
+
+            //calc bboxes for all join groups
+            for (Node nodeJ: Nodes) {
+                if (nodeJ.mark >= 0) {
+                    Bbox jGBi = joinGroupBox.get(nodeJ.mark);
+
+                    //update bbox for group
+                    if (nodeJ.lat < jGBi.lat_min) { jGBi.lat_min = nodeJ.lat; }
+                    if (nodeJ.lat > jGBi.lat_max) { jGBi.lat_max = nodeJ.lat; }
+                    if (nodeJ.lon < jGBi.lon_min) { jGBi.lon_min = nodeJ.lon; }
+                    if (nodeJ.lon > jGBi.lon_max) { jGBi.lon_max = nodeJ.lon; }
+                }
+            }
+
+            //rebuild cluster-index from zero
+            buildNodeClusterIndex(false);
+
+            for (int i = 0; i < joinGroups; i++) {
+                joiningNodes = 0;
+                //AimEdgesNum = 0;
+                AimEdges = new ArrayList<>();
+
+                //first
+                boolean mode1 = false;
+    // label found: lNextNode:;
+                while (true) {
+                    //get node from bbox by cluster-index
+                    //without cluster-index search have complexety ~O(n^2)
+                    Node nodeJ = getNodeInBboxByCluster(joinGroupBox.get(i), mode1);
+                    //"next" next time
+                    mode1 = true;
+
+                    if (nodeJ != null) {
+                        if (nodeJ.mark == i) {
+                            //this joining group
+                            joiningNodes = joiningNodes + 1;
+                            for (Edge edgeE : nodeJ.edgeL) {
+                                //skip already marked as aiming
+                                if ((edgeE.mark & Mark.MARK_AIMING) > 0) {
+                        // goto found: GoTo lSkipEdge;
+                                    continue;
+                                }
+                                //skip all collapsing junctions
+                                if ((edgeE.mark & Mark.MARK_COLLAPSING) > 0 && (edgeE.mark & Mark.MARK_JUNCTION) > 0) {
+                        // goto found: GoTo lSkipEdge;
+                                    continue;
+                                }
+
+                                //remain: all edges which will survive from all nodes of this join group
+                                //plus all collapsing edges of main roads (this needed for removing noise of last edges near junctions)
+                                AimEdge addedAE = new AimEdge();
+                                addedAE.lat1 = nodeJ.lat;
+                                addedAE.lon1 = nodeJ.lon;
+                                if (edgeE.node1 == nodeJ) {
+                                    //lat1-lon1 is always a node which will collapse (and so points to junction)
+                                    addedAE.lat2 = edgeE.node2.lat;
+                                    addedAE.lon2 = edgeE.node2.lon;
+                                }
+                                else {
+                                    addedAE.lat2 = edgeE.node1.lat;
+                                    addedAE.lon2 = edgeE.node1.lon;
+                                }
+                                if ((edgeE.mark & Mark.MARK_COLLAPSING) > 0) {
+                                    //mark as aiming, for skip it next time
+                                    edgeE.mark = edgeE.mark | Mark.MARK_AIMING;
+                                }
+                                AimEdges.add(addedAE);
+        // label found: lSkipEdge:;
+                            }
+                        }
+                // goto found: GoTo lNextNode;
+                    } else { break; }
                 }
 
-                if (Chain.size() > 1) {
-                    //2 or more found - new group
-                    for (Node chainJ: Chain) {
-                        chainJ.mark = joinGroups;
+                if (joiningNodes > 0) {
+                    if ((joiningNodes & 127) == 0) {
+                        //display progress
+                        //Form1.Caption = "Collapse " + CStr(passNumber) + ", Aim " + CStr(i) + " / " + CStr(joinGroups): Form1.Refresh;
                     }
-                    joinGroups = joinGroups + 1;
+                    //find centroid of junction
+                    findAiming(joinedNode.get(i), angleLimit);
                 }
             }
-        }
 
-        //4) calculate coordinates of centroid for collapsed junction
-
-        //G.redim(joinedNode, joinGroups);
-        //G.redim(joinGroupBox, joinGroups);
-        ArrayList<Node> joinedNode = new ArrayList<>(joinGroups);
-        ArrayList<Bbox> joinGroupBox = new ArrayList<>(joinGroups);
-
-        //Create nodes for all found join-groups
-        for (int i = 0; i <= joinGroups; i++) {
-            Node addedNode = new Node(-1);
-            addedNode.mark = -1;
-            //fake coords, so cluster-index algo will not get (0,0) coords
-            addedNode.lat = Nodes.get(0).lat;
-            addedNode.lon = Nodes.get(0).lon;
-            Nodes.add(addedNode);
-            joinedNode.add(addedNode);
-            Bbox addedBox = new Bbox(360, -360, 360, -360);
-            joinGroupBox.add(addedBox);
-        }
-
-        //calc bboxes for all join groups
-        for (j = 0; j <= NodesNum - 1; j++) {
-            if (Nodes[j]..mark >= 0) {
-                i = Nodes[j]..mark;
-
-                //update bbox for group
-                if (Nodes[j]..lat < joinGroupBox[i]..lat_min) { joinGroupBox[i]..lat_min = Nodes[j]..lat; }
-                if (Nodes[j]..lat > joinGroupBox[i]..lat_max) { joinGroupBox[i]..lat_max = Nodes[j]..lat; }
-                if (Nodes[j]..lon < joinGroupBox[i]..lon_min) { joinGroupBox[i]..lon_min = Nodes[j]..lon; }
-                if (Nodes[j]..lon > joinGroupBox[i]..lon_max) { joinGroupBox[i]..lon_max = Nodes[j]..lon; }
+            //5) delete all collapsing edges
+            for (Edge edgeI : Edges) {
+                if ((edgeI.mark & Mark.MARK_COLLAPSING) > 0) {
+                    edgeI.delEdge();
+                }
             }
-        }
 
-        //'rebuild cluster-index from zero
-        buildNodeClusterIndex(0);
-
-        for (i = 0; i <= joinGroups - 1; i++) {
-            joiningNodes = 0;
-            AimEdgesNum = 0;
-
-            //'first
-            mode1 = 0;
-            //*TODO:** label found: lNextNode:;
-            //get node from bbox by cluster-index
-            //without cluster-index search have complexety ~O(n^2)
-            j = getNodeInBboxByCluster(joinGroupBox[i], mode1);
-            //'"next" next time
-            mode1 = 1;
-
-            if (j != -1) {
-                if (Nodes[j]..mark == i) {
-                    //this joining group
-                    joiningNodes = joiningNodes + 1;
-                    for (m = 0; m <= Nodes[j].Edges - 1; m++) {
-                        e = Nodes[j]..edge(m);
-                        //'skip already marked as aiming
-                        if ((Edges[e]..mark && MARK_AIMING) > 0) { //*TODO:** goto found: GoTo lSkipEdge; }
-                        //'skip all collapsing junctions
-                        if ((Edges[e]..mark && MARK_COLLAPSING) > 0 && (Edges[e]..mark && MARK_JUNCTION) > 0) { //*TODO:** goto found: GoTo lSkipEdge; }
-
-                        //remain: all edges which will survive from all nodes of this join group
-                        //plus all collapsing edges of main roads (this needed for removing noise of last edges near junctions)
-                        if (Edges[e]..node1 == j) {
-                            //'lat1-lon1 is always a node which will collapse (and so points to junction)
-                            AimEdges[AimEdgesNum]..lat1 = Nodes[j]..lat;
-                            AimEdges[AimEdgesNum]..lon1 = Nodes[j]..lon;
-                            AimEdges[AimEdgesNum]..lat2 = Nodes[Edges[e]..node2]..lat;
-                            AimEdges[AimEdgesNum]..lon2 = Nodes[Edges[e]..node2]..lon;
+            //6) Collapse nodes to junctions single nodes
+            for (Node nodeJ : Nodes) {
+                if (nodeJ.mark >= 0) {
+                    int i = nodeJ.mark;
+                    for (Edge edgeM : nodeJ.edgeL) {
+                        //reconnect edge to centroid
+                        if (edgeM.node1 == nodeJ) {
+                            edgeM.node1 = joinedNode.get(i);    // TODO: переделать под Node.markNode
                         }
                         else {
-                            AimEdges[AimEdgesNum]..lat1 = Nodes[j]..lat;
-                            AimEdges[AimEdgesNum]..lon1 = Nodes[j]..lon;
-                            AimEdges[AimEdgesNum]..lat2 = Nodes[Edges[e]..node1]..lat;
-                            AimEdges[AimEdgesNum]..lon2 = Nodes[Edges[e]..node1]..lon;
+                            edgeM.node2 = joinedNode.get(i);
                         }
-                        if ((Edges[Nodes[j]..edge(m)]..mark && MARK_COLLAPSING) > 0) {
-                            //mark as aiming, for skip it next time
-                            Edges[e]..mark = Edges[e]..mark || MARK_AIMING;
-                        }
-                        addAimEdge();
-                        //*TODO:** label found: lSkipEdge:;
+                        joinedNode.get(i).edgeL.add(new Edge(edgeM));
+                        //k = joinedNode.get(i).Edges;
+                        //Nodes[joinedNode[i]]..edge(k) = Nodes[j]..edge(m);
+                        //Nodes[joinedNode[i]].Edges = k + 1;
                     }
+                    //all edges were reconnected
+                    nodeJ.edgeL.clear();
+                    //kill
+                    nodeJ.delNode();
                 }
-                //*TODO:** goto found: GoTo lNextNode;
+                /*if ((j && 8191) == 0) {
+                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Del " + CStr(j) + " / " + CStr(NodesNum): Form1.Refresh;
+                }*/
             }
 
-            if (joiningNodes > 0) {
-                if ((joiningNodes && 127) == 0) {
-                    //display progress
-                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Aim " + CStr(i) + " / " + CStr(joinGroups): Form1.Refresh;
-                }
-                //'find centroid of junction
-                findAiming(Nodes[joinedNode[i]], angleLimit);
-            }
-        }
-
-        //5) delete all collapsing edges
-        for (i = 0; i <= EdgesNum - 1; i++) {
-            if ((Edges[i]..mark && MARK_COLLAPSING) > 0) {
-                delEdge(i);
-            }
-        }
-
-        //6) Ñollapse nodes to junctions single nodes
-        for (j = 0; j <= NodesNum - 1; j++) {
-            if (Nodes[j]..mark >= 0) {
-                i = Nodes[j]..mark;
-                for (m = 0; m <= Nodes[j].Edges - 1; m++) {
-                    //reconnect edge to centroid
-                    if (Edges[Nodes[j]..edge(m)]..node1 == j) {
-                        Edges[Nodes[j]..edge(m)]..node1 = joinedNode[i];
-                    }
-                    else {
-                        Edges[Nodes[j]..edge(m)]..node2 = joinedNode[i];
-                    }
-                    k = Nodes[joinedNode[i]].Edges;
-                    Nodes[joinedNode[i]]..edge(k) = Nodes[j]..edge(m);
-                    Nodes[joinedNode[i]].Edges = k + 1;
-                }
-                //'all edges were reconnected
-                Nodes[j].Edges = 0;
-                //'kill
-                delNode(j);
-            }
-            if ((j && 8191) == 0) {
-                Form1.Caption = "Collapse " + CStr(passNumber) + ", Del " + CStr(j) + " / " + CStr(NodesNum): Form1.Refresh;
-            }
-        }
-
-        if (joinGroups > 0) {
-            //unless no junction detected - relaunch algo
-            passNumber = passNumber + 1;
-            DoEvents;
-            //*TODO:** goto found: GoTo lIteration;
+            if (joinGroups > 0) {
+                //unless no junction detected - relaunch algo
+                passNumber = passNumber + 1;
+                //DoEvents;
+        // goto found: GoTo lIteration;
+            } else { break; }
         }
     }
 
