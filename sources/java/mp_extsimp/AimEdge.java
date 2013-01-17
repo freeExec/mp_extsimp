@@ -8,7 +8,7 @@ package mp_extsimp;
  *
  * @author freeExec
  */
-public class aimedge {
+public class AimEdge {
     public double lat1;
     public double lon1;
     public double lat2;
