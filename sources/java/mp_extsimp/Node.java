@@ -51,6 +51,16 @@ public class Node {
         this.nodeID = nodeID;
         Init();
     }
+    public Node(Node node) {
+        this.nodeID = node.nodeID;
+        this.lat = node.lat;
+        this.lon = node.lon;
+        this.markNode = node.markNode;
+        this.mark = node.mark;
+        this.temp_dist = node.temp_dist;
+        Init();
+        this.edgeL.addAll(node.edgeL);
+    }
 /*    
     public void addEdge(int Id) {
         this.edge[Edges++] = Id;

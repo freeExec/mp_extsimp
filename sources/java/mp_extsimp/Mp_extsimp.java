@@ -2736,7 +2736,7 @@ autoINCNodesNum -= addedNodes.size();
                         //Form1.Caption = "Collapse " + CStr(passNumber) + ", Aim " + CStr(i) + " / " + CStr(joinGroups): Form1.Refresh;
                     }
                     //find centroid of junction
-                    findAiming(joinedNode.get(i), angleLimit);
+                    joinedNode.set(i, findAiming(joinedNode.get(i), angleLimit));
                 }
             }
 
@@ -3101,5 +3101,188 @@ autoINCNodesNum -= addedNodes.size();
 
 //*TODO:** label found: lReachOne:;
         //one border-node reach - end
+    }
+
+//Check all edges of node for collapsing marker and add their other ends into chain
+    public static void groupCollapse(Node node1) {
+
+        for (Edge edge: node1.edgeL) {
+            if ((edge.mark & Mark.MARK_COLLAPSING) > 0) {
+                Node k = edge.node1;
+                //get other end of edge
+                if (k == node1) { k = edge.node2; }
+
+                //if other end is marked as node-of-junction -> add it to current chain
+                if ((k.mark == Mark.MARK_NODE_OF_JUNCTION) && Chain.contains(k)) { Chain.add(k); }
+            }
+        }
+    }
+
+//Find centroid of junction by aiming-edges
+    //Will find location, equally distant from all lines (defined by AimEdges)
+    //Iterative search by 5 points, combines moving into direction of minimizing sum of squares of distances
+    //and bisection method to clarify centroid position
+    public static Node findAiming(Node node, double angleLimit) { // TODO: Use of ByRef founded
+        double px = 0;
+        double py = 0;
+        double dx = 0;
+        double dy = 0;
+        double q = 0;
+        double v, v1, v2, v3, v4;
+        double dvx, dvy;
+        double estStepX = 0;
+        double estStepY = 0;
+        //Dim phase As Long
+        double maxAngle = 0;
+
+        px = 0;
+        py = 0;
+        Node result = new Node(node);
+
+        if (AimEdges.isEmpty()) { return result; }
+
+        //calculate equation elements of all aimedges
+        //equation: Distance of (x,y) = a * x + b * y + c
+        //q[i] = 1 / sqrt(((y2[i]-y1[i])^2+(x2[i]-x1[i])^2)
+        //a[i] = (y2[i]-y1[i])*q[i]
+        //b[i] = (x1[i]-x2[i])*q[i]
+        //c[i] = (y1[i]*x2[i]-x1[i]*y2[i])*q[i]
+        //also calc default centroid as average of all aimedges lat1-lot1 coords
+
+        for (AimEdge AimI: AimEdges) {
+            //TODO: fix (not safe to 180/-180 edge)
+            px = px + AimI.lat1;
+            py = py + AimI.lon1;
+            dx = AimI.lat2 - AimI.lat1;
+            dy = AimI.lon2 - AimI.lon1;
+            q = Math.sqrt(dx * dx + dy * dy);
+            AimI.d = q;
+            if (q != 0) {
+                q = 1 / q;
+            }
+            //a and b is normalized normal to edge
+            AimI.a = dy * q;
+            AimI.b = -dx * q;
+            AimI.c = (AimI.lon1 * AimI.lat2 - AimI.lon2 * AimI.lat1) * q;
+        }
+        px = px / AimEdges.size();
+        py = py / AimEdges.size();
+
+        //check max angle between aimedges
+        //angle is checked in lat/lon grid, so not exactly angle in real world
+        maxAngle = 0;
+        for (int i = 1; i < AimEdges.size(); i++) {
+            for (int j = 0; j < i; j++) {
+                //vector product of normals, result is sin(angle)
+                //angle is smallest of (a,180-a)
+                q = Math.abs(AimEdges.get(i).a * AimEdges.get(j).b - AimEdges.get(i).b * AimEdges.get(j).a);
+                if (q > maxAngle) { maxAngle = q; }
+            }
+        }
+
+        //angle is too small, iterative aiming will make big error along roads and should not be used
+        if (maxAngle < angleLimit) {
+            //goto found: GoTo lResult;
+            result.lat = px;
+            result.lon = py;
+            return result;
+        }
+
+
+        //OK, angle is good => lets start iterative search
+
+        //initial steps
+        estStepX = 0.0001;
+        estStepY = 0.0001;
+        int t = 0;
+        //px and py is start location
+
+        do {
+//label found: lNextStep:;
+            t++;
+            v = 0;
+            v1 = 0;
+            v2 = 0;
+            v3 = 0;
+            v4 = 0;
+
+            //calc distance in 5 points - current guess and 4 points on ends of "+"-cross
+            for (AimEdge AimI: AimEdges) {
+                //sum of module distances, not good
+                //        v = v + Abs(px * AimEdges(i).a + py * AimEdges(i).b + AimEdges(i).c)
+                //        v1 = v1 + Abs((px + EstStepX) * AimEdges(i).a + py * AimEdges(i).b + AimEdges(i).c)
+                //        v2 = v2 + Abs((px - EstStepX) * AimEdges(i).a + py * AimEdges(i).b + AimEdges(i).c)
+                //        v3 = v3 + Abs(px * AimEdges(i).a + (py + EstStepY) * AimEdges(i).b + AimEdges(i).c)
+                //        v4 = v4 + Abs(px * AimEdges(i).a + (py - EstStepY) * AimEdges(i).b + AimEdges(i).c)
+
+                //sum of square distances - better
+                v = v + Math.pow(px * AimI.a + py * AimI.b + AimI.c, 2);
+                v1 = v1 + Math.pow((px + estStepX) * AimI.a + py * AimI.b + AimI.c, 2);
+                v2 = v2 + Math.pow((px - estStepX) * AimI.a + py * AimI.b + AimI.c, 2);
+                v3 = v3 + Math.pow(px * AimI.a + (py + estStepY) * AimI.b + AimI.c, 2);
+                v4 = v4 + Math.pow(px * AimI.a + (py - estStepY) * AimI.b + AimI.c, 2);
+            }
+
+            if (v > v1 || v > v2 || v > v3 || v > v4) {
+                //v is not smallest => centroid location is not in covered by our cross (px+-EstStepX,py+-EstStepY)
+                //=> we need to shift
+                if (v > v1 || v > v2) {
+                    //shift by X (by half of quad) in direction to minimize v
+                    if (v1 < v2) { px += estStepX * 0.5; } else { px -= estStepX * 0.5; }
+                }
+                if (v > v3 || v > v4) {
+                    //shift by Y (by half of quad) in direction to minimize v
+                    if (v3 < v4) { py += estStepY * 0.5; } else { py -= estStepY * 0.5; }
+                }
+        //goto found: GoTo lNextStep;
+                continue;
+            }
+            else {
+                //v is smallest => centroid location IS covered by our cross (px+-EstStepX,py+-EstStepY)
+                //we need to select sub-rectangle to clarify position
+
+                //find q as max of v1-v4
+                q = v1;
+                int i = 1;
+                if (v2 > q) { q = v2; i = 2; }
+                if (v3 > q) { q = v3; i = 3; }
+                if (v4 > q) { q = v4; i = 4; }
+                switch (i) {
+                    case  4:
+                        //v4 is max, select half with v3
+                        py = py + estStepY * 0.5;
+                        estStepY = estStepY * 0.5;
+                        break;
+                    case  3:
+                        //v3 is max, select half with v4
+                        py = py - estStepY * 0.5;
+                        estStepY = estStepY * 0.5;
+                        break;
+                    case  2:
+                        //v2 is max, select half with v1
+                        px = px + estStepX * 0.5;
+                        estStepX = estStepX * 0.5;
+                        break;
+                    case  1:
+                        //v1 is max, select half with v2
+                        px = px - estStepX * 0.5;
+                        estStepX = estStepX * 0.5;
+                        break;
+                }
+
+                //if required accuracy not yet reached - continue
+                //exit if 100k iteration does not help
+                //if (t < 100000 && estStepX > 0.0000001 || estStepY > 0.0000001) { //*TODO:** goto found: GoTo lNextStep; }
+            }
+        //if required accuracy not yet reached - continue
+        //exit if 100k iteration does not help
+        } while (t < 100000 && estStepX > 0.0000001 || estStepY > 0.0000001);
+
+        //OK, found
+
+//label found: lResult:;
+        result.lat = px;
+        result.lon = py;
+        return result;
     }
 }
