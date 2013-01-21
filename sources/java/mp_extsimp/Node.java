@@ -224,4 +224,42 @@ public class Node {
             edgeQ.mark &= (-1 ^ Mark.MARK_WAVEPASSED);
         }
     }
+
+    //mark one half of loop as junction by moving from node to node with smallest temp_dist
+    //node1 - start node (i.e. where waves collide)
+    public static void markLoopHalf(Node node1) {
+        double min_dist;
+        Node min_dist_node;
+        Edge min_dist_edge;
+
+        Node node = node1;
+        //label found: lMoveNext:;
+        //reached start node - exit
+        //if (node.mark == 1  || node.mark == -1) { return; }
+        while (!(node.mark == 1  || node.mark == -1)) {
+            //find near node with smaller temp_dist
+            min_dist = node.temp_dist;
+            min_dist_node = null;
+            min_dist_edge = null;
+            //check all edges
+            for (Edge e: node.edgeL) {
+                Node d = e.node1;
+                if (d == node) { d = e.node2; }
+                //d - always other end of edge
+                if (d.mark != 0 && d.temp_dist < min_dist) {
+                    //smaller temp_dist found
+                    min_dist = d.temp_dist;
+                    min_dist_node = d;
+                    min_dist_edge = e;
+                }
+            }
+
+            if (min_dist_edge != null) {
+                //mark passed edge as junction
+                min_dist_edge.mark |= Mark.MARK_JUNCTION;
+                node = min_dist_node;
+        //goto found: GoTo lMoveNext;
+            }
+        }
+    }
 }

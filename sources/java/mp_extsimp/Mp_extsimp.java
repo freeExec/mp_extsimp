@@ -2857,8 +2857,8 @@ autoINCNodesNum -= addedNodes.size();
                         q.mark |= Mark.MARK_JUNCTION;
 
                         //mark both loop half by moving backward from collision edge to start
-                        markLoopHalf(d);
-                        markLoopHalf(Chain.get(j));
+                        Node.markLoopHalf(d);
+                        Node.markLoopHalf(Chain.get(j));
 
                         //mark start edge
                         edge1.mark |= Mark.MARK_JUNCTION;
