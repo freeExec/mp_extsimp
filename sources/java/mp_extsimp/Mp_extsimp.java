@@ -2899,40 +2899,35 @@ autoINCNodesNum -= addedNodes.size();
 
     //Check all edges of node for junction marker and add them into collapsing constuction
     public static void checkForCollapeByChain2(Node node1) {
+        boolean borderNode = false;
 
-        int j = 0;
-        int edge = 0;
-        int borderNode = 0;
-
-        borderNode = 0;
-
-        for (j = 0; j <= Nodes[node1].Edges - 1; j++) {
-            edge = Nodes[node1].edge(j);
-            if ((Edges[edge]..mark && MARK_JUNCTION) > 0) {
+        for (Edge edge: node1.edgeL) {
+            if ((edge.mark & Mark.MARK_JUNCTION) > 0) {
                 //edge is marked as junction
-                //'mark it as collapsing
-                Edges[edge]..mark = Edges[edge]..mark || MARK_COLLAPSING;
+                //mark it as collapsing
+                edge.mark |= Mark.MARK_COLLAPSING;
 
                 //add other end of edge into collapsing constuction
-                if (isInChain(Edges[edge].node1) == 0) {
+                if (!Chain.contains(edge.node1)) {
                     //node1 is not in chain
-                    addChain(Edges[edge].node1);
+                    Chain.add(edge.node1);
                 }
-                if (isInChain(Edges[edge]..node2) == 0) {
+                if (!Chain.contains(edge.node2)) {
                     //node2 is not in chain
-                    addChain(Edges[edge]..node2);
+                    Chain.add(edge.node2);
                 }
-                //*TODO:** goto found: GoTo lNext;
-            }
-
+        //goto found: GoTo lNext;
+            } else {
             //at lease one non-junction edge found
-            borderNode = 1;
-            //*TODO:** label found: lNext:;
+                borderNode = true;
+                // TODO: добавил сам
+                break;
+            }
+//label found: lNext:;
         }
 
-        //'node is border-node
-        if (borderNode == 1) { Nodes[node1]..mark = MARK_NODE_BORDER; }
-
+        //node is border-node
+        if (borderNode) { node1.mark = Mark.MARK_NODE_BORDER; }
     }
 
     //Shrink group of border-nodes to minimum-distance (point or segment or more complex)
@@ -2943,142 +2938,159 @@ autoINCNodesNum -= addedNodes.size();
     //if two border-nodes reach each other, they joins
     //if reaching 1 border-node is not possible, then near edges are checked for internal-points minimizing sum len
     //this edges also marked as part of junctions (requires than all edges were not very long)
-    public static void shrinkBorderNodes(int borderNum, double maxShift) {
-        //'current node index of border-node
-        int[] borderNodes() = null;
-        //'distance, covered by border-node while moving on edges
-        double[] borderShifts() = null;
-        Long, i = null; j As Long, k As Long
-        Long, e = null; p As Long
+    public static void shrinkBorderNodes(Node borderNum, double maxShift) {
+        //current node index of border-node
+        ArrayList<Node> borderNodes;
+        //distance, covered by border-node while moving on edges
+        double[] borderShifts;
+
         int moving = 0;
         int moved = 0;
-        Double, dist = null; dist0 As Double
+        double dist, dist0;
         double dist1 = 0;
-        Double, dist_min = null; node_dist_min As Long, edge_dist_min As Long
-        //'indexes of border-nodes
-        G.redim(borderNodes, borderNum);
-        //'len, passed by border-nodes
-        G.redim(borderShifts, borderNum);
+        double dist_min;
+        Node node_dist_min;
+        Edge edge_dist_min;
+        int borderNumI = Chain.indexOf(borderNum);
+        //indexes of border-nodes
+        //G.redim(borderNodes, borderNum);
+        borderNodes = new ArrayList<>(borderNumI);
+        //len, passed by border-nodes
+        //G.redim(borderShifts, borderNum);
+        borderShifts = new double[borderNumI];
 
         //get border nodes
-        for (i = 0; i <= borderNum - 1; i++) {
-            borderNodes[i] = Chain[i];
-            //'zero len passed
+        for (int i = 0; i < borderNumI; i++) {
+            //borderNodes[i] = Chain.get(i);
+            borderNodes.add(Chain.get(i));
+            //zero len passed
             borderShifts[i] = 0;
         }
+        do {
+//label found: lRestartCycle:;
+            moving = 0;
+            moved = 0;
 
-        //*TODO:** label found: lRestartCycle:;
-        moving = 0;
-        moved = 0;
-
-        while (moving < borderNum) {
-            //*TODO:** label found: lRestartMoving:;
-            //calc current sum of distances from Moving border-node to all others
-            dist0 = 0;
-            for (j = 0; j <= borderNum - 1; j++) {
-                if (j != moving) {
-                    dist1 = distance(borderNodes[moving], borderNodes[j]);
-                    dist0 = dist0 + dist1;
-                }
-            }
-
-            //finding node, where this border-node can move to minimize distance
-            //'need sum-distance less than current
-            dist_min = dist0;
-            //'not yet found
-            node_dist_min = -1: edge_dist_min == -1;
-            for (k = 0; k <= Nodes[borderNodes[moving]].Edges - 1; k++) {
-                e = Nodes[borderNodes[moving]]..edge(k);
-                if ((Edges[e]..mark && MARK_JUNCTION) == 0) {
-                    //not junction edge
-                    p = Edges[e]..node1;
-                    //'get len of this edge
-                    dist1 = distance(p, Edges[e]..node2);
-                    //'moving will exceed MaxShift
-                    if (borderShifts[moving] + dist1 > maxShift) { //*TODO:** goto found: GoTo lSkipAsLong; }
-                    //'get other end of edge
-                    if (p == borderNodes[moving]) { p = Edges[e]..node2; }
-
-                    //calc new sum of distances from this border-node to all others
-                    dist = 0;
-                    for (j = 0; j <= borderNum - 1; j++) {
-                        if (j != moving) {
-                            dist1 = distance(p, borderNodes[j]);
-                            dist = dist + dist1;
-                        }
-                    }
-                    //'minimizing found
-                    if (dist < dist_min) { dist_min = Dist: node_dist_min == p: edge_dist_min == e; }
-                    //*TODO:** label found: lSkipAsLong:;
-                }
-            }
-
-            if (node_dist_min > -1) {
-                //found node, more close to other border-nodes
-                //'mark for collapse
-                Edges[edge_dist_min]..mark = Edges[edge_dist_min]..mark || MARK_COLLAPSING;
-                //'add found node to chain of junction nodes
-                if (isInChain(node_dist_min) == 0) { addChain(node_dist_min); }
-                //'at least 1 border-node moved
-                moved = 1;
-
-                //' update passed distance
-                borderShifts[moving] = borderShifts[moving] + distance(Edges[edge_dist_min]..node1, Edges[edge_dist_min]..node2);
-
-                for (i = 0; i <= borderNum - 1; i++) {
-                    if (node_dist_min == borderNodes[i]) {
-                        //after moving border-node joined with another one - remove
-                        if (borderShifts[i] < borderShifts[moving]) {
-                            //joined with node with smaller moves - keep smallest
-                            borderShifts[i] = borderShifts[moving];
-                        }
-
-                        //join
-                        borderNodes[moving] = borderNodes[borderNum - 1];
-                        borderShifts[moving] = borderShifts[borderNum - 1];
-                        borderNum = borderNum - 1;
-                        //'only 1 border-node left
-                        if (borderNum == 1) { //*TODO:** goto found: GoTo lReachOne; }
-                        //'back to moving this node
-                        //*TODO:** goto found: GoTo lRestartMoving;
+            while (moving < borderNumI) {
+    //label found: lRestartMoving:;
+                boolean lRestartMovingFlag = false;
+                //calc current sum of distances from Moving border-node to all others
+                dist0 = 0;
+                for (int j = 0; j < borderNumI; j++) {
+                    if (j != moving) {
+                        dist1 = Node.distance(borderNodes.get(moving), borderNodes.get(j));
+                        dist0 = dist0 + dist1;
                     }
                 }
 
-                //border-node not joined, just moved
-                borderNodes[moving] = node_dist_min;
-                //*TODO:** goto found: GoTo lRestartMoving;
+                //finding node, where this border-node can move to minimize distance
+                //need sum-distance less than current
+                dist_min = dist0;
+                //not yet found
+                node_dist_min = null; edge_dist_min = null;
+                for (Edge e: borderNodes.get(moving).edgeL) {
+                    if ((e.mark & Mark.MARK_JUNCTION) == 0) {
+                        //not junction edge
+                        Node p = e.node1;
+                        //get len of this edge
+                        dist1 = Node.distance(p, e.node2);
+                        //moving will exceed MaxShift
+                        if (borderShifts[moving] + dist1 > maxShift) {
+                //goto found: GoTo lSkipAsLong;
+                            continue;
+                        }
+                        //get other end of edge
+                        if (p == borderNodes.get(moving)) { p = e.node2; }
+
+                        //calc new sum of distances from this border-node to all others
+                        dist = 0;
+                        for (int j = 0; j < borderNumI; j++) {
+                            if (j != moving) {
+                                dist1 = Node.distance(p, borderNodes.get(j));
+                                dist = dist + dist1;
+                            }
+                        }
+                        //minimizing found
+                        if (dist < dist_min) { dist_min = dist; node_dist_min = p; edge_dist_min = e; }
+//label found: lSkipAsLong:;
+                    }
+                }
+
+                if (node_dist_min != null) {
+                    //found node, more close to other border-nodes
+                    //mark for collapse
+                    edge_dist_min.mark |= Mark.MARK_COLLAPSING;
+                    //add found node to chain of junction nodes
+                    if (!Chain.contains(node_dist_min)) { Chain.add(node_dist_min); }
+                    //at least 1 border-node moved
+                    moved = 1;
+
+                    //update passed distance
+                    borderShifts[moving] += Node.distance(edge_dist_min.node1, edge_dist_min.node2);
+
+                    for (int i = 0; i < borderNumI; i++) {
+                        if (node_dist_min == borderNodes.get(i)) {
+                            //after moving border-node joined with another one - remove
+                            if (borderShifts[i] < borderShifts[moving]) {
+                                //joined with node with smaller moves - keep smallest
+                                borderShifts[i] = borderShifts[moving];
+                            }
+
+                            //join
+                            borderNodes.set(moving, borderNodes.get(borderNumI - 1));
+                            borderShifts[moving] = borderShifts[borderNumI - 1];
+                            borderNumI--;
+                            //only 1 border-node left
+                            if (borderNumI == 1) {
+                    //goto found: GoTo lReachOne;
+                                return;
+                            }
+                            //back to moving this node
+                //goto found: GoTo lRestartMoving;
+                            lRestartMovingFlag = true;
+                            break;
+                        }
+                    }
+
+                    //border-node not joined, just moved
+                    if (!lRestartMovingFlag) {
+                        borderNodes.set(moving, node_dist_min);
+                        lRestartMovingFlag = true;
+                    }
+            //goto found: GoTo lRestartMoving;
+                }
+                //not found - proceeding to next node
+
+                if (!lRestartMovingFlag) { moving++; }
             }
-            //not found - proceeding to next node
 
-            moving = moving + 1;
-        }
-
-        //'some border-nodes were moved, repeat cycle
-        if (moved == 1) { //*TODO:** goto found: GoTo lRestartCycle; }
-
+            //some border-nodes were moved, repeat cycle
+//            if (moved == 1) {
+//        //goto found: GoTo lRestartCycle;
+//            }
+        } while (moved == 1);
         //no border-nodes moved during whole cycle - looks like shrinking reached minimum
 
-        if (borderNum > 1) {
+        if (borderNumI > 1) {
             //2 or more border nodes remains
 
-            //'all border-nodes
-            for (i = 0; i <= borderNum - 1; i++) {
-                //'all edges of it
-                for (k = 0; k <= Nodes[borderNodes[i]].Edges - 1; k++) {
-                    e = Nodes[borderNodes[i]]..edge(k);
-                    if ((Edges[e]..mark && MARK_JUNCTION) == 0) {
+            //all border-nodes
+            for (int i = 0; i < borderNumI; i++) {
+                //all edges of it
+                for (Edge e :borderNodes.get(i).edgeL) {
+                    if ((e.mark & Mark.MARK_JUNCTION) == 0) {
                         //not junction edge -> edge of main road
-                        for (j = 0; j <= borderNum - 1; j++) {
-                            //'not the same border-node
+                        for (int j = 0; j < borderNumI; j++) {
+                            //not the same border-node
                             if (j != i) {
-                                dist = distanceToSegment(Edges[e]..node1, Edges[e]..node2, borderNodes[j]);
+                                dist = Node.distanceToSegment(e.node1, e.node2, borderNodes.get(j));
                                 if (DistanceToSegment_last_case == 3) {
                                     //3rd case distance - interval internal point is closer to border-node j than both ends of interval
                                     //-> mark edge and both nodes for collapsing
-                                    //'mark for definite collapse
-                                    Edges[e]..mark = Edges[e]..mark || MARK_COLLAPSING;
-                                    if (isInChain(Edges[e]..node1) == 0) { addChain(Edges[e]..node1); }
-                                    if (isInChain(Edges[e]..node2) == 0) { addChain(Edges[e]..node2); }
+                                    //mark for definite collapse
+                                    e.mark |= Mark.MARK_COLLAPSING;
+                                    if (!Chain.contains(e.node1)) { Chain.add(e.node1); }
+                                    if (!Chain.contains(e.node2)) { Chain.add(e.node2); }
                                 }
                             }
                         }
@@ -3087,8 +3099,7 @@ autoINCNodesNum -= addedNodes.size();
             }
         }
 
-        //*TODO:** label found: lReachOne:;
+//*TODO:** label found: lReachOne:;
         //one border-node reach - end
-
     }
 }
