@@ -2547,7 +2547,7 @@ autoINCNodesNum -= addedNodes.size();
 
             for (Node nodeI: Nodes) {
                 //not in join group
-                nodeI.mark = 0;
+                nodeI.mark = -1;
             }
 
             //2) mark edges by trying to shrink junction
@@ -2791,7 +2791,7 @@ autoINCNodesNum -= addedNodes.size();
     public static void checkShortLoop2(Edge edge1, double maxDist) {
         Node node1;
         Node node2;
-        Double dist0, Dist1;
+        double dist0, Dist1;
 
         //wave starts
         node1 = edge1.node1;
@@ -2810,7 +2810,6 @@ autoINCNodesNum -= addedNodes.size();
         //propagate waves
         int j = 0;
         int k, k2;
-        Edge q = null;
         Node d = null;
         while (j < Chain.size()) {
             k = Chain.get(j).mark;
@@ -2822,8 +2821,7 @@ autoINCNodesNum -= addedNodes.size();
             }
 
             dist0 = Chain.get(j).temp_dist;
-            for (int i = 0; i < Chain.get(j).edgeL.size(); i++) {
-                q = Chain.get(j).edgeL.get(i);
+            for (Edge q: Chain.get(j).edgeL) {
                 //wave already passed this edge
                 if ((q.mark & Mark.MARK_WAVEPASSED) != 0) {
         //goto found: GoTo lSkipEdge;
