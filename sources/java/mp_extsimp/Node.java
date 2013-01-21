@@ -205,4 +205,13 @@ public class Node {
         node2.delNode();
     }
 
+//*TODO:** label found: lClearTemp:;
+    //clear all temp marks
+    public void clearTemp() {
+        this.mark = 0;
+        this.temp_dist = 0;
+        for (Edge edgeQ: this.edgeL) {
+            edgeQ.mark &= (-1 ^ Mark.MARK_WAVEPASSED);
+        }
+    }
 }

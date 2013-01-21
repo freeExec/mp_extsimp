@@ -2676,7 +2676,7 @@ autoINCNodesNum -= addedNodes.size();
             for (int i = 0; i < joinGroups; i++) {
                 joiningNodes = 0;
                 //AimEdgesNum = 0;
-                AimEdges = new ArrayList<>();
+                AimEdges = new ArrayList();
 
                 //first
                 boolean mode1 = false;
@@ -2788,31 +2788,32 @@ autoINCNodesNum -= addedNodes.size();
     //if waves collide, they are part of short loop
     //waves are limited by length and MARK_DISTCHECK
     //if no short loop found, this edge marked with MARK_DISTCHECK (means, no short loop passing this edge)
-    public static void checkShortLoop2(int edge1, double maxDist) {
-        Long, i = null; j As Long, k As Long, k2 As Long
-        Long, e = null; d As Long, q As Long
-        int node1 = 0;
-        int node2 = 0;
-        Double, dist0 = null; Dist1 As Double
+    public static void checkShortLoop2(Edge edge1, double maxDist) {
+        Node node1;
+        Node node2;
+        Double dist0, Dist1;
 
         //wave starts
-        node1 = Edges[edge1].node1;
-        node2 = Edges[edge1].node2;
-        //'half of edge len - start point is center of edge
-        dist0 = 0.5 * distance(node1, node2);
-        Nodes[node1]..mark = 1;
-        Nodes[node2]..mark = -1;
-        Edges[edge1]..mark = Edges[edge1]..mark || MARK_WAVEPASSED;
-        ChainNum = 0;
-        addChain(node1);
-        addChain(node2);
-        Nodes[node1]..temp_dist = dist0;
-        Nodes[node2]..temp_dist = dist0;
+        node1 = edge1.node1;
+        node2 = edge1.node2;
+        //half of edge len - start point is center of edge
+        dist0 = 0.5 * Node.distance(node1, node2);
+        node1.mark = 1;
+        node2.mark = -1;
+        edge1.mark |= Mark.MARK_WAVEPASSED;
+        Chain = new ArrayList<>();
+        Chain.add(node1);
+        Chain.add(node2);
+        node1.temp_dist = dist0;
+        node2.temp_dist = dist0;
 
         //propagate waves
-        j = 0;
-        while (j < ChainNum) {
-            k = Nodes[Chain[j]]..mark;
+        int j = 0;
+        int k, k2;
+        Edge q = null;
+        Node d = null;
+        while (j < Chain.size()) {
+            k = Chain.get(j).mark;
             if (k > 0) {
                 k2 = k + 1;
             }
@@ -2820,69 +2821,79 @@ autoINCNodesNum -= addedNodes.size();
                 k2 = k - 1;
             }
 
-            dist0 = Nodes[Chain[j]]..temp_dist;
-            for (i = 0; i <= Nodes[Chain[j]].Edges - 1; i++) {
-                q = Nodes[Chain[j]]..edge(i);
-                //'wave already passed this edge
-                if ((Edges[q]..mark && MARK_WAVEPASSED) != 0) { //*TODO:** goto found: GoTo lSkipEdge; }
-                //'no short loop here - no need to pass thru this edge
-                if ((Edges[q]..mark && MARK_DISTCHECK) != 0) { //*TODO:** goto found: GoTo lSkipEdge; }
-                Edges[q]..mark = Edges[q]..mark || MARK_WAVEPASSED;
-                .d = Edges[q].node1;
-                if (.d == Chain[j]) { .d = Edges[q].node2; }
-                if (Nodes[.d]..mark != 0) {
-                    if ((Nodes[.d]..mark < 0 && k > 0) || (Nodes[.d]..mark > 0 && k < 0)) {
-                        //loop found
-                        //'update by len of this edge
-                        Dist1 = dist0 + distance(.d, Chain[j]);
-                        //'len of second part of wave
-                        Dist1 = Dist1 + Nodes[.d]..temp_dist;
-                        //'loop is too long
-                        if (Dist1 > maxDist) { //*TODO:** goto found: GoTo lSkipEdge; }
-
-                        //'short loop found
-                        //*TODO:** goto found: GoTo lShortLoop;
-                    }
-                    //*TODO:** goto found: GoTo lSkipEdge;
+            dist0 = Chain.get(j).temp_dist;
+            for (int i = 0; i < Chain.get(j).edgeL.size(); i++) {
+                q = Chain.get(j).edgeL.get(i);
+                //wave already passed this edge
+                if ((q.mark & Mark.MARK_WAVEPASSED) != 0) {
+        //goto found: GoTo lSkipEdge;
+                    continue;
                 }
-                //'update by len of this edge
-                Dist1 = dist0 + distance(.d, Chain[j]);
-                //'set passed len
-                Nodes[.d]..temp_dist = Dist1;
-                Nodes[.d]..mark = k2;
-                //'add to chain, but only if distance from start is not too long
-                if (Dist1 < maxDist) { addChain(.d); }
-                //*TODO:** label found: lSkipEdge:;
+                //no short loop here - no need to pass thru this edge
+                if ((q.mark & Mark.MARK_DISTCHECK) != 0) {
+        //goto found: GoTo lSkipEdge;
+                    continue;
+                }
+                q.mark |= Mark.MARK_WAVEPASSED;
+                d = q.node1;
+                if (d == Chain.get(j)) { d = q.node2; }
+                if (d.mark != 0) {
+                    if ((d.mark < 0 && k > 0) || (d.mark > 0 && k < 0)) {
+                        //loop found
+                        //update by len of this edge
+                        Dist1 = dist0 + Node.distance(d, Chain.get(j));
+                        //len of second part of wave
+                        Dist1 += d.temp_dist;
+                        //loop is too long
+                        if (Dist1 > maxDist) { 
+            //goto found: GoTo lSkipEdge;
+                            continue;
+                        }
+                        //short loop found
+            //goto found: GoTo lShortLoop;
+//*TODO:** label found: lShortLoop:;
+                        //short loop found
+                        //mark final edge
+                        q.mark |= Mark.MARK_JUNCTION;
+
+                        //mark both loop half by moving backward from collision edge to start
+                        markLoopHalf(d);
+                        markLoopHalf(Chain.get(j));
+
+                        //mark start edge
+                        edge1.mark |= Mark.MARK_JUNCTION;
+
+                        //*TODO:** label found: lClearTemp:;
+                        for (Node chainJ: Chain) {
+                            chainJ.clearTemp();
+                        }
+                        return;
+                    }
+            //goto found: GoTo lSkipEdge;
+                    continue;
+                }
+                //update by len of this edge
+                Dist1 = dist0 + Node.distance(d, Chain.get(j));
+                //set passed len
+                d.temp_dist = Dist1;
+                d.mark = k2;
+                //add to chain, but only if distance from start is not too long
+                if (Dist1 < maxDist) { Chain.add(d); }
+//label found: lSkipEdge:;
             }
-            j = j + 1;
+            j++;
         }
         //short loop not found
 
-        //'no short passing this edge
-        Edges[edge1]..mark = Edges[edge1]..mark || MARK_DISTCHECK;
-        //*TODO:** goto found: GoTo lClearTemp;
+        //no short passing this edge
+        edge1.mark |= Mark.MARK_DISTCHECK;
+    //goto found: GoTo lClearTemp;
 
-        //*TODO:** label found: lShortLoop:;
-        //short loop found
-        //'mark final edge
-        Edges[q]..mark = Edges[q]..mark || (MARK_JUNCTION);
 
-        //mark both loop half by moving backward from collision edge to start
-        markLoopHalf(.d);
-        markLoopHalf(Chain[j]);
-
-        //'mark start edge
-        Edges[edge1]..mark = Edges[edge1]..mark || (MARK_JUNCTION);
-
-        //*TODO:** label found: lClearTemp:;
+//label found: lClearTemp:;
         //clear all temp marks
-        for (j = 0; j <= ChainNum - 1; j++) {
-            Nodes[Chain[j]]..mark = 0;
-            Nodes[Chain[j]]..temp_dist = 0;
-            for (i = 0; i <= Nodes[Chain[j]].Edges - 1; i++) {
-                q = Nodes[Chain[j]]..edge(i);
-                Edges[q]..mark = Edges[q]..mark && (-1 Xor MARK_WAVEPASSED);
-            }
+        for (Node chainJ: Chain) {
+            chainJ.clearTemp();
         }
     }
 
