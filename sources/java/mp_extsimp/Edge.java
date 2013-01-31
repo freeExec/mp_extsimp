@@ -184,4 +184,23 @@ public class Edge {
         }
         return null;
     }
+    
+    // проверка цепочки Edge -> Node -> Edge (Edge == Edge)
+    public int validLinks() {
+        boolean ok1 = false;
+        if (this.node1 != null) {
+            for (Edge edgeI: this.node1.edgeL) {
+                if (edgeI == this) { ok1 = true;}
+            }
+        } else { return 0;}
+        boolean ok2 = false;
+        if (this.node2 != null) {
+            for (Edge edgeI:this.node2.edgeL) {
+                if (edgeI == this) { ok2 = true;}
+            }
+        } else { return 0;}
+        if (ok1 & ok2) { return 1; }
+        return -1;
+    }
+
 }

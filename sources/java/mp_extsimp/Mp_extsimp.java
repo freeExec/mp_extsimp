@@ -151,12 +151,12 @@ public class Mp_extsimp {
         douglasPeucker_total_split(5, 100);
         //Epsilon = 5 metres
         //Max edge - 100 metres
-
+checkIntegrity();
         collapseJunctions2(1000, 1200, 0.13);
         //Slide allowed up to 1000 metres
         //Max junction loop is 1200 metres
         //0.13 -> ~ 7.46 degress
-
+checkIntegrity();
 //        filterVoidEdges();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
@@ -3302,5 +3302,20 @@ if (edge1.node1.VBNum == 1816) {
         node.lat = px;
         node.lon = py;
         return;
+    }
+    
+    public static void checkIntegrity() {
+        System.out.println("=============== checkIntegrity ===============");
+        int count = 0;
+        for (Edge edgeTest: Edges) {
+            if (count == 223) {
+                count = 223;
+            }
+            if (edgeTest.validLinks() < 0) {
+                System.out.printf("%d: %d, %d\n", count, edgeTest.node1.VBNum, edgeTest.node2.VBNum);
+            }
+            count++;
+        }
+        System.out.println("==================== END =====================");
     }
 }
