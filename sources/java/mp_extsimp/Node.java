@@ -51,16 +51,17 @@ public class Node {
         this.nodeID = nodeID;
         Init();
     }
-    public Node(Node node) {
+    /*public Node(Node node) {
         this.nodeID = node.nodeID;
         this.lat = node.lat;
         this.lon = node.lon;
         this.markNode = node.markNode;
         this.mark = node.mark;
         this.temp_dist = node.temp_dist;
+        this.VBNum = node.VBNum;
         Init();
         this.edgeL.addAll(node.edgeL);
-    }
+    }*/
 /*    
     public void addEdge(int Id) {
         this.edge[Edges++] = Id;
@@ -116,18 +117,18 @@ public class Node {
         }
         else if (c > (a + b)) {
             _rtn = Math.sqrt(b);
-            //'node2 is closest point to node3
+            //node2 is closest point to node3
             DistanceToSegment_last_case = 2;
             return _rtn;
         }
         else {
-            //'Calc sides lengths from squares
+            //Calc sides lengths from squares
             a = Math.sqrt(a);
             b = Math.sqrt(b);
             c = Math.sqrt(c);
             s2 = 0.5 * Math.sqrt((a + b + c) * (a + b - c) * (a + c - b) * (b + c - a));
             _rtn = s2 / a;
-            //'closest point is inside interval
+            //closest point is inside interval
             DistanceToSegment_last_case = 3;
         }
         return _rtn;

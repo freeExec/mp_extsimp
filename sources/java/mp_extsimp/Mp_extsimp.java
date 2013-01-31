@@ -2195,6 +2195,9 @@ autoINCNodesNum -= addedNodes.size();
             Print #2, "Nod1=0,"; CStr(Chain(0)); ",0";
             Print #2, "Nod2=" + CStr(ChainNum - 1) + ","; CStr(Chain(ChainNum - 1)); ",0";
             */
+            if (refEdge.node1.VBNum == 186) {
+                typ = typ + 0;
+            }
             for(int i = 0; i < Chain.size(); i++) {
                 Node iChain = Chain.get(i);
                 if (i != 0) { result += ","; }
@@ -2489,7 +2492,7 @@ autoINCNodesNum -= addedNodes.size();
         //int[] joinedNode;
         int joiningNodes = 0;
         int passNumber = 0;
-        Node borderNodes;
+        int borderNodes;
         //Bbox[] joinGroupBox;
 
         passNumber = 1;
@@ -2553,13 +2556,14 @@ autoINCNodesNum -= addedNodes.size();
             //2) mark edges by trying to shrink junction
             joinGroups = 0;
             for (Node nodeI: Nodes) {
-                if (nodeI.nodeID != Mark.MARK_NODEID_DELETED  && nodeI.mark == 0) {
+                if (nodeI.nodeID != Mark.MARK_NODEID_DELETED  && nodeI.mark == -1) {
                     //not deleted node, not marked yet -> should check
 
                     //start new group
                     //ChainNum = 0;
                     Chain = new ArrayList<Node>();
-                    borderNodes = nodeI;    // далее он ссылается на Chain(borderNode), а я его только что обнулил и добавляю
+                    borderNodes = 0; //nodeI;    // далее он ссылается на Chain(borderNode), а я его только что обнулил и добавляю
+                    //Без изменений он ссылается на 0-й элемент
                     //add this node to a chain
                     Chain.add(nodeI);
 
@@ -2567,13 +2571,19 @@ autoINCNodesNum -= addedNodes.size();
                     checkForCollapeByChain2(Chain.get(0));
 
                     //node is border-node
-                    //if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
+                    /*if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) {
+                        if (Chain.size() > 1 ) {
+                            borderNodes = Chain.get(1);
+                        } else {
+                            System.out.println("Chain size < 2");
+                        }
+                    }*/
 
                     int j = 1;
                     if (Chain.size() > 1) {
                         //node is border-node
                         // перенес сюда, т.к. Chain(1) может и не существовать, но если так, то borderNodes далее не используется
-                        if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = Chain.get(1); }
+                        if (Chain.get(0).mark == Mark.MARK_NODE_BORDER) { borderNodes = 1; /*Chain.get(1); */}
                         //at least 2 nodes found to collapse
 
     // label found: lRecheckAgain:;
@@ -2585,19 +2595,19 @@ autoINCNodesNum -= addedNodes.size();
 
                                 if (nodeJ.mark == Mark.MARK_NODE_BORDER) {
                                     //border-node found - move it to start of chain (by swap)
-                                    Node nodeK = borderNodes;
-                                    borderNodes = nodeJ;
-                                    nodeJ = nodeK;
+                                    Node nodeK = Chain.get(borderNodes);
+                                    Chain.set(borderNodes, nodeJ);
+                                    Chain.set(j, nodeK);
 
-                                    borderNodes = Chain.get(Chain.indexOf(borderNodes) + 1);
+                                    borderNodes++; //= Chain.get(Chain.indexOf(borderNodes) + 1);
                                 }
-                                j = j + 1;
+                                j++;
                             }
 
-                            if (borderNodes != Chain.get(0)) {
+                            if (borderNodes > 1) {
                                 //if border-nodes found - shrink whole construction by sliding border-nodes by geometry
-                                shrinkBorderNodes(borderNodes, slideMaxDist);
-                                borderNodes = Chain.get(0);
+                                shrinkBorderNodes(Chain.get(borderNodes), slideMaxDist);
+                                borderNodes = 0; //Chain.get(0);
                     // goto found: GoTo lRecheckAgain;
                             } else { break; }
                         }
@@ -2612,7 +2622,7 @@ autoINCNodesNum -= addedNodes.size();
                     Form1.Caption = "Collapse " + CStr(passNumber) + ", Shrink " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
                 }*/
             }
-
+            System.out.println(Chain.size());
             //3) group edges to separate junctions
             joinGroups = 0;
             for (Node nodeI: Nodes) {
@@ -2651,6 +2661,7 @@ autoINCNodesNum -= addedNodes.size();
                 //fake coords, so cluster-index algo will not get (0,0) coords
                 addedNode.lat = Nodes.get(0).lat;
                 addedNode.lon = Nodes.get(0).lon;
+                addedNode.VBNum = Nodes.size();
                 Nodes.add(addedNode);
                 joinedNode.add(addedNode);
                 Bbox addedBox = new Bbox(360, -360, 360, -360);
@@ -2691,7 +2702,7 @@ autoINCNodesNum -= addedNodes.size();
                     if (nodeJ != null) {
                         if (nodeJ.mark == i) {
                             //this joining group
-                            joiningNodes = joiningNodes + 1;
+                            joiningNodes++;
                             for (Edge edgeE : nodeJ.edgeL) {
                                 //skip already marked as aiming
                                 if ((edgeE.mark & Mark.MARK_AIMING) > 0) {
@@ -2720,7 +2731,7 @@ autoINCNodesNum -= addedNodes.size();
                                 }
                                 if ((edgeE.mark & Mark.MARK_COLLAPSING) > 0) {
                                     //mark as aiming, for skip it next time
-                                    edgeE.mark = edgeE.mark | Mark.MARK_AIMING;
+                                    edgeE.mark |= Mark.MARK_AIMING;
                                 }
                                 AimEdges.add(addedAE);
         // label found: lSkipEdge:;
@@ -2736,7 +2747,13 @@ autoINCNodesNum -= addedNodes.size();
                         //Form1.Caption = "Collapse " + CStr(passNumber) + ", Aim " + CStr(i) + " / " + CStr(joinGroups): Form1.Refresh;
                     }
                     //find centroid of junction
-                    joinedNode.set(i, findAiming(joinedNode.get(i), angleLimit));
+                    /*joinedNode.set(i, findAiming(joinedNode.get(i), angleLimit));
+                    // т.к. я создаю новый объект, чтобы не менять входной объект, нужно его так же заменить в Nodes
+                    // хотя в оригинале именно так
+                    Nodes.set(joinedNode.get(i).VBNum, joinedNode.get(i));
+                    */
+                    // пробую как оригинале, параметр in/out
+                    findAiming(joinedNode.get(i), angleLimit);
                 }
             }
 
@@ -2792,7 +2809,9 @@ autoINCNodesNum -= addedNodes.size();
         Node node1;
         Node node2;
         double dist0, Dist1;
-
+if (edge1.node1.VBNum == 1816) {
+    dist0 = 0;
+}
         //wave starts
         node1 = edge1.node1;
         node2 = edge1.node2;
@@ -2919,7 +2938,8 @@ autoINCNodesNum -= addedNodes.size();
             //at lease one non-junction edge found
                 borderNode = true;
                 // TODO: добавил сам
-                break;
+                //break;
+                // не понятно зачем добавил, бордер да не меняется, но возможно след отрезки должны попасть в IF
             }
 //label found: lNext:;
         }
@@ -3082,7 +3102,7 @@ autoINCNodesNum -= addedNodes.size();
                             //not the same border-node
                             if (j != i) {
                                 dist = Node.distanceToSegment(e.node1, e.node2, borderNodes.get(j));
-                                if (DistanceToSegment_last_case == 3) {
+                                if (Node.DistanceToSegment_last_case == 3) {    //костыль, т.к. статичная в классе, а надо как возврат значения
                                     //3rd case distance - interval internal point is closer to border-node j than both ends of interval
                                     //-> mark edge and both nodes for collapsing
                                     //mark for definite collapse
@@ -3111,7 +3131,7 @@ autoINCNodesNum -= addedNodes.size();
                 if (k == node1) { k = edge.node2; }
 
                 //if other end is marked as node-of-junction -> add it to current chain
-                if ((k.mark == Mark.MARK_NODE_OF_JUNCTION) && Chain.contains(k)) { Chain.add(k); }
+                if ((k.mark == Mark.MARK_NODE_OF_JUNCTION) && !Chain.contains(k)) { Chain.add(k); }
             }
         }
     }
@@ -3120,7 +3140,7 @@ autoINCNodesNum -= addedNodes.size();
     //Will find location, equally distant from all lines (defined by AimEdges)
     //Iterative search by 5 points, combines moving into direction of minimizing sum of squares of distances
     //and bisection method to clarify centroid position
-    public static Node findAiming(Node node, double angleLimit) { // TODO: Use of ByRef founded
+    public static void findAiming(Node node, double angleLimit) { // TODO: Use of ByRef founded
         double px = 0;
         double py = 0;
         double dx = 0;
@@ -3135,9 +3155,9 @@ autoINCNodesNum -= addedNodes.size();
 
         px = 0;
         py = 0;
-        Node result = new Node(node);
+        //Node result = new Node(node);
 
-        if (AimEdges.isEmpty()) { return result; }
+        if (AimEdges.isEmpty()) { return; }
 
         //calculate equation elements of all aimedges
         //equation: Distance of (x,y) = a * x + b * y + c
@@ -3181,9 +3201,9 @@ autoINCNodesNum -= addedNodes.size();
         //angle is too small, iterative aiming will make big error along roads and should not be used
         if (maxAngle < angleLimit) {
             //goto found: GoTo lResult;
-            result.lat = px;
-            result.lon = py;
-            return result;
+            node.lat = px;
+            node.lon = py;
+            return;
         }
 
 
@@ -3279,8 +3299,8 @@ autoINCNodesNum -= addedNodes.size();
         //OK, found
 
 //label found: lResult:;
-        result.lat = px;
-        result.lon = py;
-        return result;
+        node.lat = px;
+        node.lon = py;
+        return;
     }
 }
