@@ -151,12 +151,12 @@ public class Mp_extsimp {
         douglasPeucker_total_split(5, 100);
         //Epsilon = 5 metres
         //Max edge - 100 metres
-checkIntegrity();
+
         collapseJunctions2(1000, 1200, 0.13);
         //Slide allowed up to 1000 metres
         //Max junction loop is 1200 metres
         //0.13 -> ~ 7.46 degress
-checkIntegrity();
+
 //        filterVoidEdges();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
@@ -2622,6 +2622,7 @@ autoINCNodesNum -= addedNodes.size();
                     Form1.Caption = "Collapse " + CStr(passNumber) + ", Shrink " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
                 }*/
             }
+
             System.out.println(Chain.size());
             //3) group edges to separate junctions
             joinGroups = 0;
@@ -2776,7 +2777,8 @@ autoINCNodesNum -= addedNodes.size();
                         else {
                             edgeM.node2 = joinedNode.get(i);
                         }
-                        joinedNode.get(i).edgeL.add(new Edge(edgeM));
+                        //joinedNode.get(i).edgeL.add(new Edge(edgeM)); // тут был косяк с клонированием
+                        joinedNode.get(i).edgeL.add(edgeM);
                         //k = joinedNode.get(i).Edges;
                         //Nodes[joinedNode[i]]..edge(k) = Nodes[j]..edge(m);
                         //Nodes[joinedNode[i]].Edges = k + 1;
