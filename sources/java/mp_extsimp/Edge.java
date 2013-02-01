@@ -75,6 +75,7 @@ public class Edge {
         return result;
     }
 
+    // необходим во внешнем добавить его в Edges
     //Join two nodes by new edge
     //node1 - start node, node2 - end node
     //return: index of new edge
