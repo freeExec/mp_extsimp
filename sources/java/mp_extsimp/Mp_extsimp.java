@@ -1,7 +1,88 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
+ mp_extsimp
+ Generalization of complex junctions and two ways roads
+ from OpenStreetMap data
+
+ Copyright © 2012-2013 OverQuantum
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ Author contacts:
+ http://overquantum.livejournal.com
+ https://github.com/OverQuantum
+
+ Project homepage:
+ https://github.com/OverQuantum/mp_extsimp
+
+
+ OpenStreetMap data licensed under the Open Data Commons Open Database License (ODbL).
+ OpenStreetMap wiki licensed under the Creative Commons Attribution-ShareAlike 2.0 license (CC-BY-SA).
+ Please refer to http://www.openstreetmap.org/copyright for details
+
+ osm2mp licensed under GPL v2, please refer to http://code.google.com/p/osm2mp/
+
+ mp file format (polish format) description from http://www.cgpsmapper.com/manual.htm
+
+
+
+
+history
+2012.10.08 - "challenge accepted", project started
+2012.10.10 - added combining of edges
+2012.10.11 - added checking of type and oneway on combining of edges
+2012.10.12 - added collapsing of junctions
+2012.10.15 - added comments to code, added handling of speedclass
+2012.10.16 - added distance in metres by WGS 84
+2012.10.16 - added joining directions (only duplicate edges and close edges forming V-form)
+2012.10.17 - chg CollapseJunctions now iterative
+2012.10.17 - added inserting near nodes to edges on joining direction (no moving of node)
+2012.10.18 - adding JoinDirections2, closest edge founds, GoByTwoWays started
+2012.10.18 - adding JoinDirections2, joining works, but some mess created...
+2012.10.21 - finished JoinDirections2, handling of circles and deleted void edges
+2012.10.22 - adding CollapseJunctions2, done main part, remain marking edges for cases of crossing if border-nodes >= 2 in the end
+2012.10.22 - adding CollapseJunctions2, marking edges for cases of crossing if border-nodes >= 2 in the end, marking long oneways before
+2012.10.23 - added limiting distance of ShrinkBorderNodes
+2012.10.23 - added check for forward/backward coverage at ends of chains in JoinDirections2
+2012.10.24 - added CheckShortLoop, does not help
+2012.10.29 - added CheckShortLoop, forward/backward coverage in JoinDirections2 for cycles
+2012.10.29 - added DouglasPeucker_total_split
+2012.10.30 - added check lens in CosAngleBetweenEdges, skipping of RouteParamExt, LoopLimit in CJ2
+2012.10.31 - fix forw/back check in JD2 (split to two cycles)
+2012.11.01 - added JoinAcute (from JD), ProjectNode, CompareRoadtype. Looks like RC1 of algo
+2012.11.01 - added Save_MP_2 (w/o rev-dir)
+2012.11.06 - added JD3 - with cluster search
+2012.11.07 - fix loop in D-P, optimized aiming and del in CJ2, added/modified status writing in form1.caption
+2012.11.09 - fix saving2 on oneway=2
+2012.11.12 - added keep of main road label
+2012.11.13 - added TWback/TWforw and checking them in JD3 (unfinished)
+2012.11.14 - added correct naming and speedclass in JD3
+ RC3
+2012.11.14 - hardcoded limits moved to func/sub parameters
+2012.11.14 - unused functions commented
+2012.11.15 - root code moved to module, removed comdlg32.bas
+2012.11.19 - added keeping header of source file, removed writing "; roadtype="
+2012.11.15-20 - adding explaining comments, small fixes
+2012.11.20 - added license and references
+2013.01.08 - added CollapseShortEdges (fix "too close nodes")
+2013.01.28 - fixed deadlock in SaveChain in case of isolated road cycle
+
+2013.02.03 - Completed porting to java (freeExec - https://github.com/freeExec/mp_extsimp)
+
+TODO:
+*? dump problems of OSM data (1: too long links, 2: ?)
+'? 180/-180 safety */
 package mp_extsimp;
 
 import java.io.*;
