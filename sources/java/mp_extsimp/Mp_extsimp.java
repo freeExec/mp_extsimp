@@ -353,8 +353,8 @@ public class Mp_extsimp {
             
             // для однопроходной загрузки
             Node addedNode;// = new Node(-1);
-            ArrayList<Node> addedNodes = new ArrayList<Node>();
-            ArrayList<Edge> addedEdges = new ArrayList<Edge>();
+            ArrayList<Node> addedNodes = new ArrayList<>();
+            ArrayList<Edge> addedEdges = new ArrayList<>();
             
             // delete after fix
             int autoINCNodesNum = 0;
@@ -1917,10 +1917,10 @@ autoINCNodesNum -= addedNodes.size();
     }
 
     //Reverse array into backward direction
-    public static void reverseArray(ArrayList arr) { // TODO: Use of ByRef founded
+    public static void reverseArray(ArrayList<Node> arr) { // TODO: Use of ByRef founded
         int i;
         int j;
-        Object t;
+        Node t;
         int num = arr.size();
         //half of len
         j = num / 2;
@@ -2027,7 +2027,7 @@ autoINCNodesNum -= addedNodes.size();
         if (nodeI.edgeL.size() != 2) {
             //i is end of chain
             //ChainNum = 0;
-            Chain = new ArrayList<Node>();
+            Chain.clear(); //= new ArrayList<Node>();
             //addChain(i);
             //addChain(j);
             Chain.add(nodeI);
@@ -2074,7 +2074,7 @@ autoINCNodesNum -= addedNodes.size();
             //2) go revert - from found end to another one and saving all nodes into Chain() array
 
             //ChainNum = 0;
-            Chain = new ArrayList<Node>();
+            Chain.clear();// = new ArrayList<Node>();
             //addChain(k);
             //addChain(i);
             Chain.add(nodeK);
@@ -2167,7 +2167,7 @@ autoINCNodesNum -= addedNodes.size();
                 //ChainNum = 0;
                 //addChain(j);
                 //addChain(i);
-                Chain = new ArrayList<Node>();
+                Chain.clear();  // = new ArrayList<Node>();
                 Chain.add(nodeJ);
                 Chain.add(nodeI);
                 if (nodeI.edgeL.size() != 2) {
@@ -2361,7 +2361,7 @@ autoINCNodesNum -= addedNodes.size();
         //2) go revert - from found end to another one and saving all nodes into Chain() array
 
         //ChainNum = 0;
-        Chain = new ArrayList<Node>();
+        Chain.clear();  // = new ArrayList<Node>();
         //addChain(k);
         //addChain(i);
         Chain.add(nodeK);
@@ -2440,7 +2440,7 @@ autoINCNodesNum -= addedNodes.size();
                 if (nodeI.edgeL.size() != 2) { return; }
 
                 //add both nodes of last edge
-                Chain = new ArrayList<Node>();
+                Chain.clear();  // = new ArrayList<Node>();
                 Chain.add(nodeJ);
                 Chain.add(nodeI);
 
@@ -2649,7 +2649,7 @@ autoINCNodesNum -= addedNodes.size();
 
                     //start new group
                     //ChainNum = 0;
-                    Chain = new ArrayList<Node>();
+                    Chain.clear();  // = new ArrayList<Node>();
                     borderNodes = 0; //nodeI;    // далее он ссылается на Chain(borderNode), а я его только что обнулил и добавляю
                     //Без изменений он ссылается на 0-й элемент
                     //add this node to a chain
@@ -2715,7 +2715,7 @@ autoINCNodesNum -= addedNodes.size();
             joinGroups = 0;
             for (Node nodeI: Nodes) {
                 if (nodeI.mark == Mark.MARK_NODE_OF_JUNCTION) {
-                    Chain = new ArrayList<Node>();
+                    Chain.clear();  // = new ArrayList<Node>();
                     //add this node to a chain
                     Chain.add(nodeI);
                     int j = 0;
@@ -2775,7 +2775,7 @@ autoINCNodesNum -= addedNodes.size();
             for (int i = 0; i < joinGroups; i++) {
                 joiningNodes = 0;
                 //AimEdgesNum = 0;
-                AimEdges = new ArrayList();
+                AimEdges = new ArrayList<>();
 
                 //first
                 boolean mode1 = false;
@@ -2909,7 +2909,7 @@ if (edge1.node1.VBNum == 1816) {
         node1.mark = 1;
         node2.mark = -1;
         edge1.mark |= Mark.MARK_WAVEPASSED;
-        Chain = new ArrayList<>();
+        Chain.clear();  // = new ArrayList<>();
         Chain.add(node1);
         Chain.add(node2);
         node1.temp_dist = dist0;
@@ -3483,7 +3483,7 @@ if (edge1.node1.VBNum == 1816) {
         //ChainNum = 0;
         //addChain(k);
         //addChain(i);
-        Chain = new ArrayList<>();
+        Chain.clear();  // = new ArrayList<>();
         Chain.add(nodeK);
         Chain.add(nodeI);
 
@@ -3562,7 +3562,7 @@ if (edge1.node1.VBNum == 1816) {
                 if (nodeI.edgeL.size() != 2) { return; }
 
                 //add both nodes of last edge
-                Chain = new ArrayList<>();
+                Chain.clear();  // = new ArrayList<>();
                 Chain.add(nodeJ);
                 Chain.add(nodeI);
 
