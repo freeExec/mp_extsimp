@@ -172,6 +172,10 @@ public class Mp_extsimp {
         douglasPeucker_total(5);
         //Epsilon = 5 metres
 
+        //Remove very short edges, they are errors, most probably
+        CollapseShortEdges(3);
+        //CollapseDistance = 3 metres
+        
         //Save result
         save_MP_2(outFile);
 
@@ -1920,7 +1924,7 @@ autoINCNodesNum -= addedNodes.size();
         boolean chainEnd = false;
         Edge nextChainEdge = null;
 
-        int k1, k2;
+        Node startNode;
 
         Edge refEdge;
 
@@ -1937,7 +1941,8 @@ autoINCNodesNum -= addedNodes.size();
         Node nodeI = edge1.node1;
         Node nodeJ = edge1.node2;
         Node nodeK;
-
+        startNode = nodeJ;
+        
         if (nodeI.edgeL.size() != 2) {
             //i is end of chain
             //ChainNum = 0;
@@ -1968,8 +1973,8 @@ autoINCNodesNum -= addedNodes.size();
             while (true) {
                 //go by chain
                 nodeK = goByChain(nodeI, nodeJ);
-                //if still 2 edges - proceed
-                if (nodeK.edgeL.size() == 2) {
+                //if still 2 edges and we have not found loop - proceed
+                if (nodeK.edgeL.size() == 2 && nodeK != startNode) {
                     nodeJ = nodeI;
                     nodeI = nodeK;
             //GoTo lGoNext;
@@ -1993,6 +1998,7 @@ autoINCNodesNum -= addedNodes.size();
             //addChain(i);
             Chain.add(nodeK);
             Chain.add(nodeI);
+            startNode = nodeK;
 
             //keep info about first edge in chain
             refEdge = new Edge(GoByChain_lastedge);
@@ -2037,7 +2043,7 @@ autoINCNodesNum -= addedNodes.size();
                 //addChain(k);
                 Chain.add(nodeK);
 
-                if (nodeK.edgeL.size() == 2) {
+                if (nodeK.edgeL.size() == 2 && nodeK != startNode) {
                     //still 2 edges - still chain
                     nodeJ = nodeI;
                     nodeI = nodeK;
@@ -2325,7 +2331,8 @@ autoINCNodesNum -= addedNodes.size();
 
             //3) optimize found chain by D-P
             //optimizeByDouglasPeucker_One_split(0, ChainNum - 1, epsilon, refEdge, maxEdge);
-            optimizeByDouglasPeucker_One_split(Chain.get(0), Chain.get(Chain.size() - 1), epsilon, refEdge, maxEdge);
+            // передача объектов некатит когда есть повторения объектов в Chain
+            optimizeByDouglasPeucker_One_split(0, Chain.size() - 1, epsilon, refEdge, maxEdge);
 
             if (!chainEnd) {
                 //continue with this chain, as it is not ended
@@ -2368,17 +2375,19 @@ autoINCNodesNum -= addedNodes.size();
     //subchain is defined by IndexStart,IndexLast
     //refEdge - road parameters of chain (for create new edge in case of optimization)
     //(180/-180 safe)
-    private static void optimizeByDouglasPeucker_One_split(Node nodeStart, Node nodeLast, double epsilon, Edge refEdge, double maxEdge) {
+    private static void optimizeByDouglasPeucker_One_split(int indexStart, int indexLast, double epsilon, Edge refEdge, double maxEdge) {
         int i = 0;
-        Node farestNode = null;
+        int farestNode = -1;
         double farestDist = 0;
         double dist = 0;
         double k = 0;
         double scalarMult = 0;
         int newspeed = 0;
         String newlabel = "";
-        int indexStart = Chain.indexOf(nodeStart);
-        int indexLast = Chain.indexOf(nodeLast);
+        //int indexStart = Chain.indexOf(nodeStart);
+        //int indexLast = Chain.indexOf(nodeLast);
+        Node nodeStart = Chain.get(indexStart);
+        Node nodeLast = Chain.get(indexLast);
 
         //one edge (or less) -> nothing to do
         if (((indexStart + 1) >= indexLast)) { return; }
@@ -2400,19 +2409,19 @@ autoINCNodesNum -= addedNodes.size();
                 dist = Node.distanceToSegment(nodeStart, nodeLast, nodeI);
             }
             if (dist > farestDist) {
-                farestDist = dist; farestNode = nodeI;
+                farestDist = dist; farestNode = i; //nodeI;
             }
 
             if (Node.distance(nodeI, nodeStart) > maxEdge) {
                 //distance from start to this node is more than limit -> we should keep this node
-                farestNode = nodeI;
+                farestNode = i; //nodeI;
     //*TODO:** goto found: GoTo lKeepFar;
                 // т.к. farestNode != null след. условие пропускается и переходим как раз на нужную метку
                 break;
             }
         }
 
-        if (farestNode == null) {
+        if (farestNode == -1) {
             //farest node not found -> all distances less than Epsilon -> remove all internal nodes
 
             //calc speed and label from all subchain edges
@@ -2446,8 +2455,8 @@ autoINCNodesNum -= addedNodes.size();
         //farest point found - keep it
         //call Douglas-Peucker for two new subchains
         //Douglas-Peucker for two new subchains
-        optimizeByDouglasPeucker_One_split(nodeStart, farestNode, epsilon, refEdge, maxEdge);
-        optimizeByDouglasPeucker_One_split(farestNode, nodeLast, epsilon, refEdge, maxEdge);
+        optimizeByDouglasPeucker_One_split(indexStart, farestNode, epsilon, refEdge, maxEdge);
+        optimizeByDouglasPeucker_One_split(farestNode, indexLast, epsilon, refEdge, maxEdge);
 
     }
 
@@ -2604,7 +2613,7 @@ autoINCNodesNum -= addedNodes.size();
 
                             if (borderNodes > 1) {
                                 //if border-nodes found - shrink whole construction by sliding border-nodes by geometry
-                                shrinkBorderNodes(Chain.get(borderNodes), slideMaxDist);
+                                shrinkBorderNodes(borderNodes, slideMaxDist);
                                 borderNodes = 0; //Chain.get(0);
                     // goto found: GoTo lRecheckAgain;
                             } else { break; }
@@ -2955,7 +2964,7 @@ if (edge1.node1.VBNum == 1816) {
     //if two border-nodes reach each other, they joins
     //if reaching 1 border-node is not possible, then near edges are checked for internal-points minimizing sum len
     //this edges also marked as part of junctions (requires than all edges were not very long)
-    public static void shrinkBorderNodes(Node borderNum, double maxShift) {
+    public static void shrinkBorderNodes(int borderNumI, double maxShift) {
         //current node index of border-node
         ArrayList<Node> borderNodes;
         //distance, covered by border-node while moving on edges
@@ -2968,7 +2977,7 @@ if (edge1.node1.VBNum == 1816) {
         double dist_min;
         Node node_dist_min;
         Edge edge_dist_min;
-        int borderNumI = Chain.indexOf(borderNum);
+        //int borderNumI = Chain.indexOf(borderNum);
         //indexes of border-nodes
         //G.redim(borderNodes, borderNum);
         borderNodes = new ArrayList<>(borderNumI);
@@ -3775,5 +3784,36 @@ if (edge1.node1.VBNum == 1816) {
             }
             break;
         }
+    }
+
+    // Collapse all edges shorter than CollapseDistance (also will kill void edges)
+    // Will collapse edges one by one, so should be called somewhere in the end of optimization
+    public static void CollapseShortEdges(double collapseDistance) {
+        int somedeleted;
+        double edgeLen;
+
+    //lIteration:
+        do {
+            somedeleted = 0;
+            for(Edge edgeI: Edges) {
+                if (edgeI.node1 != null) {
+                    edgeLen = Node.distance(edgeI.node1, edgeI.node2);
+                    if (edgeLen < collapseDistance) {
+                        Node nodeJ = edgeI.node1;
+                        Node nodeK = edgeI.node2;
+                        edgeI.delEdge();    //del this edge
+                        if (nodeJ !=  nodeK) {
+                            Node.mergeNodes(nodeJ, nodeK, false); //merge nodes, only if they are different
+                        }
+                        somedeleted = 1;
+                    }
+                }
+                /*If (i And 8191) = 0 Then
+                    'show progress
+                    Form1.Caption = "CSE " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh
+                End If*/
+            }
+        }
+        while(somedeleted > 0);
     }
 }
