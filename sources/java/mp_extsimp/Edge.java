@@ -204,4 +204,112 @@ public class Edge {
         return -1;
     }
 
+    //Combine edges. edge2 is deleted, edge1 is kept
+    //assumed, that edges have at leaset 1 common node
+    //return: 0 - not combined, 1 - combined
+    public static boolean combineEdges(Edge edge1, Edge edge2, Node commonNode) {
+        boolean _rtn = false;
+        if (combineEdgeParams(edge1, edge2, commonNode)) {
+            _rtn = true;
+            edge2.delEdge();
+        }
+        return _rtn;
+    }
+
+    //Combine edge parameters and store it to edge1
+    //return: 0 - not possible to combine, 1 - combined
+    public static boolean combineEdgeParams(Edge edge1, Edge edge2, Node commonNode) {
+        int k1 = 0;
+        int k2 = 0;
+        int k3 = 0;
+
+        if (commonNode == null) {
+            //common node not specified in call
+            if (edge1.node1 == edge2.node1  || edge1.node1 == edge2.node2) {
+                commonNode = edge1.node1;
+            }
+            else if (edge1.node2 == edge2.node1  || edge1.node2 == edge2.node2) {
+                commonNode = edge1.node2;
+            } else {
+                //can't combine edges without at least one common point
+                return false;
+            }
+        }
+
+        //calc combined label - by stats
+        Mp_extsimp.resetLabelStats();
+        Mp_extsimp.addLabelStat0(edge1.label);
+        Mp_extsimp.addLabelStat0(edge2.label);
+        edge1.label = Mp_extsimp.getLabelByStats(0);
+
+        //calc combiner road type
+        if (edge1.roadtype != edge2.roadtype) {
+            //combine main road type - higher by OSM
+            k1 = edge1.roadtype & Highway.HIGHWAY_MASK_MAIN;
+            k2 = edge2.roadtype & Highway.HIGHWAY_MASK_MAIN;
+            //keep link only if both are links
+            k3 = (edge2.roadtype & edge2.roadtype & Highway.HIGHWAY_MASK_LINK);
+            //numerically min roadtype
+            if (k2 < k1) { k1 = k2; }
+            edge1.roadtype = (byte)(k1 | k3);
+        }
+
+        //combined speed - lower
+        if (edge2.speed < edge1.speed) {
+
+            edge1.speed = edge2.speed;
+        }
+
+        if (edge1.oneway == 1) {
+            //combined oneway - keep only if both edges directed in one way
+            if (edge2.oneway == 1) {
+                //both edges are oneway
+                if (edge1.node1 == commonNode  && edge2.node2 == commonNode) {
+                    //edges are opposite oneway, result is bidirectional
+                    edge1.oneway = 0;
+                }
+                else if (edge1.node2 == commonNode  && edge2.node1 == commonNode) {
+                    //edges are opposite oneway, result is bidirectional
+                    edge1.oneway = 0;
+                }
+                //else - result is oneway
+            }
+            else {
+                //edge2 is bidirectional, so result also
+                edge1.oneway = 0;
+            }
+        }
+        //if edge1 is bidirectional, so also result
+
+        return true;
+    }
+
+    //Reconnect edge1 from node1 to node2
+    //assumed that node1 is present in edge1
+    public static void reconnectEdge(Edge edge1, Node node1, Node node2) {
+        int i = 0;
+        if (edge1.node1 == node1) {
+            edge1.node1 = node2;
+        }
+        else {
+            edge1.node2 = node2;
+        }
+
+        //remove edge1 from node1 edges
+        node1.edgeL.remove(edge1);
+/*        for (Edge edgeI: node1.edgeL) {
+            if (edgeI == edge1) {
+                //Nodes[node1]..edge(i) = Nodes[node1]..edge(Nodes[node1].Edges - 1);
+                //Nodes[node1].Edges = Nodes[node1].Edges - 1;
+                node1.edgeL.remove(edgeI);
+        //goto found: GoTo lFound;
+                break;
+            }
+        }*/
+//label found: lFound:;
+        //add edge1 to node2 edges
+        //Nodes[node2]..edge(Nodes[node2].Edges) = edge1;
+        //Nodes[node2].Edges = Nodes[node2].Edges + 1;
+        node2.edgeL.add(edge1);
+    }
 }

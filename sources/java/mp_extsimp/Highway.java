@@ -346,4 +346,35 @@ public class Highway {
         return 3;
     }
 
+    //Compare roadtype-s
+    //return: 1 - type1 have higher priority, -1 - type2 have higher priority, 0 - equal
+    public static int compareRoadtype(int type1, int type2) {
+        int _rtn = 0;
+        if (type1 == type2) {
+            //just equal
+            _rtn = 0;
+        }
+        else if ((type1 & HIGHWAY_MASK_LINK) != 0  && (type2 & HIGHWAY_MASK_LINK) == 0) {
+            //type1 is link, type2 is not
+            _rtn = -1;
+        }
+        else if ((type1 & HIGHWAY_MASK_LINK) == 0  && (type2 & HIGHWAY_MASK_LINK) != 0) {
+            //type2 is link, type1 is not
+            _rtn = 1;
+        }
+        else if ((type1 & HIGHWAY_MASK_MAIN) < (type2 & HIGHWAY_MASK_MAIN)) {
+            //type1 is less numerically - higher
+            _rtn = 1;
+        }
+        else if ((type1 & HIGHWAY_MASK_MAIN) > (type2 & HIGHWAY_MASK_MAIN)) {
+            //type1 is higher numerically - less
+            _rtn = -1;
+        }
+        else {
+            //should not happen
+            _rtn = 0;
+        }
+        return _rtn;
+    }
+
 }

@@ -164,12 +164,12 @@ public class Mp_extsimp {
         //Epsilon = 5 metres
 
         //Join edges with very acute angle into one
-//        joinAcute(100, 3);
+        joinAcute(100, 3);
         //100 metres for joining nodes
         //AcuteKoeff = 3 => 18.4 degrees
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
-//        douglasPeucker_total(5);
+        douglasPeucker_total(5);
         //Epsilon = 5 metres
 
         //Save result
@@ -1946,7 +1946,7 @@ autoINCNodesNum -= addedNodes.size();
             //addChain(j);
             Chain.add(nodeI);
             Chain.add(nodeJ);
-            refEdge = edge1;
+            refEdge = new Edge(edge1);
             
             //saved
             edge1.mark = 1;
@@ -2060,7 +2060,7 @@ autoINCNodesNum -= addedNodes.size();
                 //                        NextChainEdge
 
                 //new reference info
-                refEdge = nextChainEdge;
+                refEdge = new Edge(nextChainEdge);
                 if (refEdge.node1 == Chain.get(Chain.size()-1)) {
                     nodeI = refEdge.node2;
                     nodeJ = refEdge.node1;
@@ -2195,9 +2195,7 @@ autoINCNodesNum -= addedNodes.size();
             Print #2, "Nod1=0,"; CStr(Chain(0)); ",0";
             Print #2, "Nod2=" + CStr(ChainNum - 1) + ","; CStr(Chain(ChainNum - 1)); ",0";
             */
-            if (refEdge.node1.VBNum == 186) {
-                typ = typ + 0;
-            }
+
             for(int i = 0; i < Chain.size(); i++) {
                 Node iChain = Chain.get(i);
                 if (i != 0) { result += ","; }
@@ -3562,5 +3560,220 @@ if (edge1.node1.VBNum == 1816) {
         //call Douglas-Peucker for two new subchains
         optimizeByDouglasPeucker_One(nodeStart, farestIndex, epsilon, refEdge);
         optimizeByDouglasPeucker_One(farestIndex, nodeLast, epsilon, refEdge);
+    }
+
+    //Join edges with very acute angle into one
+    //1) distance between edges ends < JoinDistance
+    //2) angle between edges lesser than limit
+    //AcuteKoeff: 1/tan() of limit angle  (3 =>18.4 degrees)
+    public static void joinAcute(double joinDistance, double acuteKoeff) {
+        int q = 0;
+        double dist = 0;
+        int merged = 0;
+        int passNumber = 0;
+
+        for (Node nodeI: Nodes) {
+            if (nodeI.nodeID != Mark.MARK_NODEID_DELETED  && nodeI.edgeL.size() > 1) {
+                //mark to check, not deleted with 2+ edges
+                nodeI.mark = 1;
+            }
+            else {
+                //mark to skip
+                nodeI.mark = 0;
+            }
+        }
+
+        passNumber = 1;
+
+//*TODO:** label found: lIteration:;
+        while (true) {
+            merged = 0;
+            int j = 0;
+            for (Node nodeI: Nodes) {
+
+                if (nodeI.mark == 1) {
+
+                    //check for edges connecting same nodes several times
+                    //made by filling Chain array with other ends of edges
+                    Chain.clear();
+                    j = 0;
+                    while (j < nodeI.edgeL.size()) {
+                        Edge edgeJ = nodeI.edgeL.get(j);
+                        Node nodeK = edgeJ.node1;
+                        //get other end
+                        if (nodeK == nodeI) { nodeK = edgeJ.node2; }
+                        if (Chain.indexOf(nodeK) == -1) {
+                            //first occurence in chain
+                            Chain.add(nodeK);
+                        }
+                        else {
+                            //not first - should join
+                            Edge edgeM = Edge.getEdgeBetween(nodeI, nodeK);
+                            //combining succeed, we should check j-th edge once again
+                            if (Edge.combineEdges(edgeM, edgeJ, nodeI)) {
+                //goto found: GoTo lAgain;
+                                continue;
+                            }
+                        }
+                        j++;
+    //label found: lAgain:;
+                    }
+
+                    //node is processed, mark to skip
+                    nodeI.mark = 0;
+
+                    for (Node nodeJ: Chain) {
+                        //skip removed nodes
+                        if (nodeJ == null) {
+                //goto found: GoTo lSkipJ;
+                            continue;
+                        }
+                        //skip deleted nodes
+                        if (nodeJ.nodeID == Mark.MARK_NODEID_DELETED) {
+                //goto found: GoTo lSkipJ;
+                            continue;
+                        }
+                        for (Node nodeK: Chain) {
+                            //skip same and removed nodes
+                            if (nodeJ == nodeK  || nodeK == null) {
+                //goto found: GoTo lSkipK;
+                                continue;
+                            }
+                            //skip deleted nodes
+                            if (nodeK.nodeID == Mark.MARK_NODEID_DELETED) {
+                //goto found: GoTo lSkipK;
+                                continue;
+                            }
+                            //distance from Chain(k) to interval i-Chain(j)
+                            dist = Node.distanceToSegment(nodeI, nodeJ, nodeK);
+                            if (dist < joinDistance) {
+                                //node Chain(k) is close to edge i->Chain(j)
+                                if (Node.distance(nodeJ, nodeK) < joinDistance) {
+                                    //Chain(k) is close to Chain(j), they should be combined
+                                    //edge i-Chain(j)
+                                    Edge edgeM = Edge.getEdgeBetween(nodeI, nodeJ);
+                                    //edge i-Chain(k)
+                                    Edge edgeN = Edge.getEdgeBetween(nodeI, nodeK);
+
+                                    if (edgeM != null && edgeN != null) {
+    //label found: lCheckEdge:;
+                                        while(true) {
+                                            //remove any edges from Chain(j) to Chain(k)
+                                            Edge edgeP = Edge.getEdgeBetween(nodeJ, nodeK);
+                                            if (edgeP != null) {
+                                                edgeP.delEdge();
+                            //goto found: GoTo lCheckEdge;
+                                                continue;
+                                            }
+                                            break;
+                                        }
+
+                                        //at least one change made
+                                        merged++;
+                                        //mark node to check again
+                                        nodeI.mark = 1;
+
+                                        q = Highway.compareRoadtype(edgeM.roadtype, edgeN.roadtype);
+                                        if (q == -1) {
+                                            //edge n have higher priority
+                                            //combine edge m into n
+                                            Edge.combineEdges(edgeN, edgeM, nodeI);
+                                            //combine node Chain(j) into Chain(k) w/o moving Chain(k)
+                                            Node.mergeNodes(nodeK, nodeJ, true);
+                                            //mark node to check once again
+                                            nodeK.mark = 1;
+                                            //remove Chain(j) from chain
+                                            //Chain[j] = -1;
+                                            Chain.set(Chain.indexOf(nodeJ), null);
+                                            //proceed to next j
+                        //goto found: GoTo lSkipJ;
+                                            break;
+                                        } else {
+                                            //edge m have higher priority or edges are equal
+                                            //combine edge n into m
+                                            Edge.combineEdges(edgeM, edgeN, nodeI);
+                                            if (q == 0) {
+                                                //edges are equal
+                                                //combine with averaging coordinates
+                                                Node.mergeNodes(nodeJ, nodeK, false);
+                                            } else {
+                                                //edge m have higher priority
+                                                //combine w/o moving Chain(j)
+                                                Node.mergeNodes(nodeJ, nodeK, true);
+                                            }
+                                            //mark node to check once again
+                                            nodeJ.mark = 1;
+                                            //remove Chain(k) from chain
+                                            //Chain[k] = -1;
+                                            Chain.set(Chain.indexOf(nodeK), null);
+                                            //proceed to next k
+                        //goto found: GoTo lSkipK;
+                                            continue;
+                                        }
+                                    }
+                                }
+                                else if (Node.distance(nodeI, nodeK) > dist * acuteKoeff) {
+                                    //distance from i to chain(k) is higher than distance from Chain(k) to interval i-Chain(j) in AcuteKoeff times
+                                    //=> angle Chain(k)-i-Chain(j) < limit angle
+                                    //=>
+                                    //Chain(k) should be inserted into edge i-Chain(j)
+                                    //edge i-Chain(j) became Chain(k)-Chain(j) and keeps all params
+                                    //edge i-Chain(k) became joined by params
+                                    //edge i-Chain(j) - long edge
+                                    Edge edgeM = Edge.getEdgeBetween(nodeI, nodeJ);
+                                    //edge i-Chain(k) - short edge
+                                    Edge edgeN = Edge.getEdgeBetween(nodeI, nodeK);
+
+                                    if (edgeM != null && edgeN != null) {
+                                        if (Highway.compareRoadtype(edgeM.roadtype, edgeN.roadtype) == -1) {
+                                            //edge n have higher priority
+                                        }
+                                        else {
+                                            //edge m have higher priority or equal
+                                            //move Chain(k) to line i-Chain(j)
+                                            nodeK.projectNode(nodeI, nodeJ);
+                                        }
+                                        //combine params from m into n
+                                        Edge.combineEdgeParams(edgeN, edgeM, nodeI);
+                                        //edge m is now Chain(k)-Chain(j)
+                                        Edge.reconnectEdge(edgeM, nodeI, nodeK);
+                                        //mark nodes as needed to check once again
+                                        nodeJ.mark = 1;
+                                        nodeK.mark = 1;
+                                        nodeI.mark = 1;
+                                        //at least one change made
+                                        merged = merged + 1;
+                                        //remove Chain(j) from chain, as it is not connected to node i
+                                        //Chain[j] = -1;
+                                        Chain.set(Chain.indexOf(nodeJ), null);
+                                        //proceed to next j
+                            //goto found: GoTo lSkipJ;
+                                        break;
+                                    }
+                                }
+                            }
+    //label found: lSkipK:;
+                        }
+    //label found: lSkipJ:;
+                    }
+                }
+
+                /*if ((i && 8191) == 0) {
+                    //show progress
+                    Form1.Caption = "JA #" + CStr(passNumber) + " : " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
+                    DoEvents;
+                }*/
+            }
+
+            if (merged > 0) {
+                //at least one change made - relaunch algorithm
+                passNumber++;
+                //show progress
+                //Form1.Caption = "JoinAcute " + CStr(passNumber) + ": " + CStr(merged);
+        //*TODO:** goto found: GoTo lIteration;
+                continue;
+            }
+            break;
+        }
     }
 }

@@ -263,4 +263,17 @@ public class Node {
             }
         }
     }
+
+    //Move node 3(this) to closest point on line node1-node2
+    //TODO: fix (not safe to 180/-180 edge)
+    public void projectNode(Node node1, Node node2) { // TODO: Use of ByRef founded
+        double k = 0;
+        double xab = 0;
+        double yab = 0;
+        xab = node2.lat - node1.lat;
+        yab = node2.lon - node1.lon;
+        k = (xab * (this.lat - node1.lat) + yab * (this.lon - node1.lon)) / (xab * xab + yab * yab);
+        this.lat = node1.lat + k * xab;
+        this.lon = node1.lon + k * yab;
+    }
 }
