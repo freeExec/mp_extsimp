@@ -430,6 +430,22 @@ autoINCNodesNum -= addedNodes.size();
                         //iPrevLine = iStartLine;
                         //br.reset();
                         //iPhase = iPhase + 1;
+                        // замена параметров
+                        for (Edge edgeI: addedEdges) {
+                            edgeI.oneway = wayOneway;
+                            edgeI.roadtype = wayClass;
+                            edgeI.label = label;
+                            if (waySpeed >= 0) {
+                                //Edges[j].speed = waySpeed;
+                                edgeI.speed = waySpeed;
+                            }
+                            else {
+                                //were not specified
+                                //56km/h
+                                //Edges[j].speed = 3;
+                                edgeI.speed = 3;
+                            }
+                        }
 
                         addedNodes.clear();
                         addedEdges.clear();                        
@@ -590,7 +606,8 @@ autoINCNodesNum -= addedNodes.size();
                                     /*Edges[j].oneway = wayOneway;
                                     Edges[j].roadtype = wayClass;
                                     Edges[j].label = label;*/
-                                    jEdge.oneway = wayOneway;
+
+                                    /*jEdge.oneway = wayOneway;
                                     jEdge.roadtype = wayClass;
                                     jEdge.label = label;
                                     if (waySpeed >= 0) {
@@ -602,7 +619,7 @@ autoINCNodesNum -= addedNodes.size();
                                         //56km/h
                                         //Edges[j].speed = 3;
                                         jEdge.speed = 3;
-                                    }
+                                    }*/
                                     addedEdges.add(jEdge);
                                 }
                                 thisLineNodes ++;
@@ -793,8 +810,8 @@ autoINCNodesNum -= addedNodes.size();
             //not moved
             Nodes.get(i).mark = null;
         }*/
-        int EdgesNum = Edges.size();
-        for (i = 0; i < EdgesNum; i++) {
+        //int EdgesNum = Edges.size();
+        for (i = 0; i < Edges.size(); i++) {
             Edge edgeI = Edges.get(i);
             edgeI.mark = 1;
             
@@ -820,14 +837,14 @@ autoINCNodesNum -= addedNodes.size();
         //rebuild cluster-index from 0
         buildNodeClusterIndex(false);
 
-        for (i = 0; i < EdgesNum; i++) {
+        for (i = 0; i < Edges.size(); i++) {
             Edge edgeI = Edges.get(i);
             //skip marked edge or deleted
             if (edgeI.mark > 0 || edgeI.node1 == null) {
         //*TODO:** goto found: GoTo lSkipEdge;
                 continue;
             }
-            //'get bbox
+            //get bbox
             //bbox_edge = getEdgeBbox(i);
             bbox_edge = Edge.getEdgeBbox(edgeI.node1, edgeI.node2);
             //'expand it
@@ -1057,7 +1074,7 @@ autoINCNodesNum -= addedNodes.size();
                         if (d < e) {
                             //normal backward edge (or pleat crossing 0 of chain)
                             // ... d <--- e .....
-                            //'skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
+                            //skip too long edges on loop chains as it could be wrong (i.e. pleat edge which cross 0 of chain)
                             if (loopChain == 1  && (e - d) > halfChain) {
                                 //*TODO:** label found: //*TODO:** goto found: GoTo lSkip2:;
                                 continue;
@@ -1070,7 +1087,7 @@ autoINCNodesNum -= addedNodes.size();
                         else {
                             //pleat edge (or normal crossing 0 of chain)
                             // <-.-- e ... ... .... ... d <--.---.---
-                            //'on straight chains backward edge could not go forward without pleat
+                            //on straight chains backward edge could not go forward without pleat
                             if (loopChain == 0) {
                                 //*TODO:** goto found: GoTo lSkip2;
                                 continue;
@@ -1159,6 +1176,7 @@ autoINCNodesNum -= addedNodes.size();
                                 edg.node1 = chainJ.markNode;
                                 edg.node2 = chainJ_1.markNode;
                             }
+                            Edges.add(edg);
                         }
                     }
 
@@ -1201,7 +1219,7 @@ autoINCNodesNum -= addedNodes.size();
             if ((i & 8191) == 0) {
                 //show progress
                 //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                System.out.printf("JDS: %1$d / %2$d", i, EdgesNum);
+                System.out.printf("JDS: %1$d / %2$d\r", i, Edges.size());
             }
         }
     }
@@ -2312,13 +2330,16 @@ autoINCNodesNum -= addedNodes.size();
                 //*TODO:** goto found: GoTo lSkip;
             } else {
             //node: not deleted, not yet passed and with 2 edges -> should be checked for chain
+                if (nodeI.VBNum == 38409) {
+                    nodeI.VBNum = nodeI.VBNum;
+                }
                 douglasPeucker_chain_split(nodeI, epsilon, maxEdge);
             }
 //*TODO:** label found: lSkip:;
-/*            if ((i & 8191) == 0) {
+            if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                Form1.Caption = "Doug-Pek sp " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-            }*/
+                System.out.print("Doug-Pek sp (" + nodeI.VBNum/Nodes.size() + "%) " + (nodeI.VBNum) + " / " + Nodes.size() + "\r");
+            }
         }
     }
 
