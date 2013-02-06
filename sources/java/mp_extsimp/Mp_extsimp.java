@@ -937,7 +937,6 @@ autoINCNodesNum -= addedNodes.size();
                 //reverse Chain
                 reverseArray(Chain);
 
-
                 //second pass, in direction of min_dist_edge
                 goByTwoWays(min_dist_edge, edgeI, joinDistance, combineDistance, maxCosine2, true);
 
@@ -966,10 +965,9 @@ autoINCNodesNum -= addedNodes.size();
                             }
                         }
                     }*/
-                    for(Iterator<Node> jChain = Chain.iterator(); jChain.hasNext();) {
-                        for(Iterator<Edge> kEdge = jChain.next().edgeL.iterator(); kEdge.hasNext();) {
-                            Edge kEdgeN = kEdge.next();
-                            if (kEdgeN.mark == 2) { kEdgeN.mark = 1; }
+                    for(Node jChain: Chain) {
+                        for(Edge kEdge: jChain.edgeL) {
+                            if (kEdge.mark == 2) { kEdge.mark = 1; }
                         }
                     }
                     //*TODO:** goto found: GoTo lSkipDel;
@@ -1119,7 +1117,7 @@ autoINCNodesNum -= addedNodes.size();
                             Edges.get(k).oneway = 0;
                             Edges.get(k).mark = 1;
                             */
-                            Edge edg = joinByEdge(chainJ_1.markNode, chainJ.markNode);
+                            Edge edg = joinByEdge(dNode, eNode);
                             // TODO: не будет ли потери при байте
                             edg.roadtype = (byte)roadtype;
                             edg.oneway = 0;
@@ -1173,10 +1171,9 @@ autoINCNodesNum -= addedNodes.size();
                                 Edges.get(k).node1 = Nodes[Chain[j]]..mark;
                                 Edges.get(k).node2 = Nodes[Chain[j - 1]]..mark;*/
                                 edg.oneway = 1;
-                                edg.node1 = chainJ.markNode;
-                                edg.node2 = chainJ_1.markNode;
+                                edg.node1 = eNode;
+                                edg.node2 = dNode;
                             }
-                            Edges.add(edg);
                         }
                     }
 
@@ -2116,15 +2113,12 @@ autoINCNodesNum -= addedNodes.size();
                 //*TODO:** goto found: GoTo lSkip;
             } else {
             //node: not deleted, not yet passed and with 2 edges -> should be checked for chain
-                if (nodeI.VBNum == 38409) {
-                    nodeI.VBNum = nodeI.VBNum;
-                }
                 douglasPeucker_chain_split(nodeI, epsilon, maxEdge);
             }
 //*TODO:** label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.print("Doug-Pek sp (" + nodeI.VBNum/Nodes.size() + "%) " + (nodeI.VBNum) + " / " + Nodes.size() + "\r");
+                System.out.print("Doug-Pek sp (" + nodeI.VBNum/Nodes.size()*100.0f + "%) " + (nodeI.VBNum) + " / " + Nodes.size() + "\r");
             }
         }
     }
@@ -3440,16 +3434,16 @@ if (edge1.node1.VBNum == 1816) {
             //join first and last nodes by new edge
             if (refEdge.oneway == 2) {
                 //reversed oneway
-                edgeI = Edge.joinByEdge(nodeLast, nodeStart);
+                edgeI = joinByEdge(nodeLast, nodeStart);
                 edgeI.oneway = 1;
             } else {
-                edgeI = Edge.joinByEdge(nodeStart, nodeLast);
+                edgeI = joinByEdge(nodeStart, nodeLast);
                 edgeI.oneway = refEdge.oneway;
             }
             edgeI.roadtype = refEdge.roadtype;
             edgeI.speed = (byte)newspeed;
             edgeI.label = newlabel;
-            Edges.add(edgeI);
+
             return;
         }
 
