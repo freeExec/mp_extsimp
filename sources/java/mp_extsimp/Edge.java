@@ -47,9 +47,21 @@ public class Edge {
         //find this edge among edges of node1
         //edge already deleted        
         if (this.node1 == null) { return; }
-        this.node1.edgeL.remove(this);
+        this.node1.edgeL.remove(this);    // вроде как особого влияния на результат не оказывает.
+        /*int index = this.node1.edgeL.indexOf(this);
+        int lastEl = this.node1.edgeL.size() - 1;
+        if (index != -1) {
+            if (index != lastEl) { this.node1.edgeL.set(index, this.node1.edgeL.get(lastEl)); }
+            this.node1.edgeL.remove(lastEl);
+        }*/   // в релизе лучше закоментить
         this.node1 = null;
         this.node2.edgeL.remove(this);
+        /*index = this.node2.edgeL.indexOf(this);
+        lastEl = this.node2.edgeL.size() - 1;
+        if (index != -1) {
+            if (index != lastEl) { this.node2.edgeL.set(index, this.node2.edgeL.get(lastEl)); }
+            this.node2.edgeL.remove(lastEl);
+        }*/
         this.node2 = null;
     }
 

@@ -89,10 +89,7 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
-//import com.sun.corba.se.spi.orbutil.fsm.Input;
-//import java.io.BufferedReader;
-//import java.io.FileInputStream;
-//import java.io.InputStreamReader;
+
 
 /**
  *
@@ -184,12 +181,19 @@ public class Mp_extsimp {
     
     public static void main(String[] args) {
         //Locale.setDefault(Locale.ENGLISH);
-        optimizeRouting(args[0]);
+        System.out.println("Generalization of complex junctions and two ways roads from OpenStreetMap data\n" +
+            "Copyright 2012-2013 OverQuantum\n" + 
+            "Version: 0.2    Java porting freeExec\n");
+        if (args.length != 1) {
+            System.out.print("Usages: mp_extsimp filename.mp\n");
+        } else {
+            optimizeRouting(args[0]);
+        }
     }
     
     private static void optimizeRouting(String inputFile) {
         String outFile = "";
-        String outFile2 = "";
+        //String outFile2 = "";
         long time1 = 0;
 
         //System.out.println(String.format("Nod1=0,%d,0\n", 8742));
@@ -258,7 +262,8 @@ public class Mp_extsimp {
         save_MP_2(outFile);
 
         //display timing
-        System.out.printf("Done %1$tH:%1$tM:%1$tS s", System.currentTimeMillis() - time1);
+        long time2 = System.currentTimeMillis();
+        System.out.printf("Done %1$tT s",  time2 - time1);
     }
 
     //Init module (all arrays)
@@ -309,7 +314,7 @@ public class Mp_extsimp {
         //int iPhase = 0;
         //long iStartLine = 0;
         long iPrevLine = 0;
-        long fileLen = 0;
+        //long fileLen = 0;
         int lastPercent = 0;
         //String sPrefix = "";
         int dataLineNum = 0;
@@ -338,7 +343,7 @@ public class Mp_extsimp {
             fis = new FileInputStream(filename);
             br = new BufferedReader(new InputStreamReader(fis, "CP1251"));
             
-            fileLen = fis.getChannel().size();
+            //fileLen = fis.getChannel().size();
             
             sectionType = 0;
             wayClass = -1;
@@ -713,10 +718,10 @@ autoINCNodesNum -= addedNodes.size();
                 }
 //*TODO:** label found: lSkip:;
 
-                if ((i % 80) == 0) {  //8191
+                if ((i & 8191) == 0) {  //8191
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-// TODO                    System.out.printf("Join soft %1$d / %2$d\n", i, NodesNum);
+                    System.out.printf("Join soft %1$d / %2$d\n", i, Nodes.size());
                 }
 
             }
@@ -775,7 +780,7 @@ autoINCNodesNum -= addedNodes.size();
         Node eNode, dNode;
         int e, d;
         Edge q;
-        double dist1, dist2;
+        double dist1;//, dist2;
         Bbox bbox_edge;
         double angl;
         double min_dist;
@@ -1747,9 +1752,9 @@ autoINCNodesNum -= addedNodes.size();
 
     //Save geometry to .mp file with joining chains into polylines
     public static void save_MP_2(String filename) {
-        int i = 0;
+        /*int i = 0;
         int k1, k2;
-        int typ = 0;
+        int typ = 0;*/
 
         //Open(filename For Output As #2);
         BufferedWriter bw;
@@ -2118,7 +2123,7 @@ autoINCNodesNum -= addedNodes.size();
 //*TODO:** label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.print("Doug-Pek sp (" + nodeI.VBNum/Nodes.size()*100.0f + "%) " + (nodeI.VBNum) + " / " + Nodes.size() + "\r");
+                System.out.print("Doug-Pek sp " + nodeI.VBNum + " / " + Nodes.size() + "\r");
             }
         }
     }
@@ -2263,7 +2268,7 @@ autoINCNodesNum -= addedNodes.size();
         double farestDist = 0;
         double dist = 0;
         double k = 0;
-        double scalarMult = 0;
+        //double scalarMult = 0;
         int newspeed = 0;
         String newlabel = "";
         //int indexStart = Chain.indexOf(nodeStart);
@@ -2419,7 +2424,7 @@ autoINCNodesNum -= addedNodes.size();
                     }
                 }
             }
-
+            int k = 0;
             for (Edge edgeI: Edges) {
                 if (edgeI.node1 != null) {
                     //check all edges (not links) for short loops
@@ -2431,10 +2436,10 @@ autoINCNodesNum -= addedNodes.size();
                         if ((edgeI.mark & Mark.MARK_DISTCHECK) == 0) { checkShortLoop2(edgeI, loopLimit); }
                     }
                 }
-                /*if ((i && 65535) == 0) {
+                if ((k++ & 65535) == 0) {
                     //display progress
-                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Shorts " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                }*/
+                    System.out.println("Collapse " + passNumber + ", Shorts " + k + " / " + Edges.size());
+                }
             }
 
             for (Node nodeI: Nodes) {
@@ -2506,10 +2511,10 @@ autoINCNodesNum -= addedNodes.size();
                         }
                     }
                 }
-                /*if ((i && 8191) == 0) {
+                if ((nodeI.VBNum & 8191) == 0) {
                     //show progress
-                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Shrink " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                }*/
+                    System.out.println("Collapse " + passNumber + ", Shrink " + nodeI.VBNum + " / " + Nodes.size());
+                }
             }
 
             //3) group edges to separate junctions
@@ -2676,9 +2681,9 @@ autoINCNodesNum -= addedNodes.size();
                     //kill
                     nodeJ.delNode();
                 }
-                /*if ((j && 8191) == 0) {
-                    Form1.Caption = "Collapse " + CStr(passNumber) + ", Del " + CStr(j) + " / " + CStr(NodesNum): Form1.Refresh;
-                }*/
+                if ((nodeJ.VBNum & 8191) == 0) {
+                    System.out.println("Collapse " + passNumber + ", Del " + nodeJ.VBNum + " / " + Nodes.size());
+                }
             }
 
             if (joinGroups > 0) {
@@ -2699,9 +2704,7 @@ autoINCNodesNum -= addedNodes.size();
         Node node1;
         Node node2;
         double dist0, Dist1;
-if (edge1.node1.VBNum == 1816) {
-    dist0 = 0;
-}
+
         //wave starts
         node1 = edge1.node1;
         node2 = edge1.node2;
@@ -2770,7 +2773,7 @@ if (edge1.node1.VBNum == 1816) {
                         //mark start edge
                         edge1.mark |= Mark.MARK_JUNCTION;
 
-                        //*TODO:** label found: lClearTemp:;
+            //*TODO:** label found: lClearTemp:;
                         for (Node chainJ: Chain) {
                             chainJ.clearTemp();
                         }
@@ -3191,7 +3194,6 @@ if (edge1.node1.VBNum == 1816) {
 //label found: lResult:;
         node.lat = px;
         node.lon = py;
-        return;
     }
     
     public static void checkIntegrity() {
@@ -3224,12 +3226,11 @@ if (edge1.node1.VBNum == 1816) {
             }
             //node: not deleted, not yet passed and with 2 edges -> should be checked for chain
             douglasPeucker_chain(nodeI, epsilon);
-
 //label found: lSkip:;
-            /*if ((i && 8191) == 0) {
+            if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                Form1.Caption = "Doug-Pek " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-            }*/
+                System.out.println("Doug-Pek " + nodeI.VBNum + " / " + Nodes.size());
+            }
         }
     }
 
@@ -3386,9 +3387,9 @@ if (edge1.node1.VBNum == 1816) {
         double farestDist = 0;
         double dist = 0;
         double k = 0;
-        double scalarMult = 0;
+        //double scalarMult = 0;
         int newspeed = 0;
-        String newlabel = "";
+        String newlabel;
 
         int indexStart = Chain.indexOf(nodeStart);
         int indexLast = Chain.indexOf(nodeLast);
@@ -3649,11 +3650,10 @@ if (edge1.node1.VBNum == 1816) {
                     }
                 }
 
-                /*if ((i && 8191) == 0) {
+                if ((nodeI.VBNum & 8191) == 0) {
                     //show progress
-                    Form1.Caption = "JA #" + CStr(passNumber) + " : " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    DoEvents;
-                }*/
+                    System.out.println("JA #" + passNumber + " : " + nodeI.VBNum + " / " + Nodes.size());
+                }
             }
 
             if (merged > 0) {
@@ -3661,6 +3661,7 @@ if (edge1.node1.VBNum == 1816) {
                 passNumber++;
                 //show progress
                 //Form1.Caption = "JoinAcute " + CStr(passNumber) + ": " + CStr(merged);
+                System.out.println("JoinAcute " + passNumber + ": " + merged);
         //*TODO:** goto found: GoTo lIteration;
                 continue;
             }
@@ -3671,12 +3672,12 @@ if (edge1.node1.VBNum == 1816) {
     // Collapse all edges shorter than CollapseDistance (also will kill void edges)
     // Will collapse edges one by one, so should be called somewhere in the end of optimization
     public static void CollapseShortEdges(double collapseDistance) {
-        int somedeleted;
+        int somedeleted, i;
         double edgeLen;
 
     //lIteration:
         do {
-            somedeleted = 0;
+            i = somedeleted = 0;
             for(Edge edgeI: Edges) {
                 if (edgeI.node1 != null) {
                     edgeLen = Node.distance(edgeI.node1, edgeI.node2);
@@ -3690,10 +3691,10 @@ if (edge1.node1.VBNum == 1816) {
                         somedeleted = 1;
                     }
                 }
-                /*If (i And 8191) = 0 Then
-                    'show progress
-                    Form1.Caption = "CSE " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh
-                End If*/
+                if ((i++ & 8191) == 0) {
+                    //show progress
+                    System.out.println("CSE " + i + " / " + Edges.size());
+                }
             }
         }
         while(somedeleted > 0);
