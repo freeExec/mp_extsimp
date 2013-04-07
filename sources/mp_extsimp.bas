@@ -77,9 +77,12 @@ Attribute VB_Name = "mp_extsimp1"
 '2012.11.20 - added license and references
 '2013.01.08 - added CollapseShortEdges (fix "too close nodes")
 '2013.01.28 - fixed deadlock in SaveChain in case of isolated road cycle
+'2013.02.28 - added MaxLinkLen to Load_MP()
+'2013.03.02 - fixed bug in output degrees<0.1, added LATLON_FORMAT
+'2013.03.03 - fixed bug in removing _link on exceeding MaxLinkLen
 
 'TODO:
-'*? dump problems of OSM data (1: too long links, 2: ?)
+'*? dump problems of OSM data (1: too long links (ready), 2: ?)
 '? 180/-180 safety
 
 Option Explicit
@@ -135,6 +138,8 @@ Public Const MARK_NODE_BORDER = -2
 Public Const MARK_NODE_OF_JUNCTION = -3
 Public Const MARK_NODEID_DELETED = -2
 
+'Format for output coordinates
+Public Const LATLON_FORMAT = "0.000000##"
 
 'OSM node - point on Earth with lat/lon coordinates
 Public Type node
@@ -559,8 +564,8 @@ Public Sub Save_MP(Filename As String)
         Print #2, CStr(GetClass_by_Highway(Edges(i).roadtype)); ",";
         Print #2, CStr(Edges(i).oneway); ",";
         Print #2, "0,0,0,0,0,0,0,0,0"
-        Print #2, "Data0=("; CStr(Nodes(k1).lat); ","; CStr(Nodes(k1).lon); "),(";
-        Print #2, CStr(Nodes(k2).lat); ","; CStr(Nodes(k2).lon); ")"
+        Print #2, "Data0=("; Format(Nodes(k1).lat, LATLON_FORMAT); ","; Format(Nodes(k1).lon, LATLON_FORMAT); "),(";
+        Print #2, Format(Nodes(k2).lat, LATLON_FORMAT); ","; Format(Nodes(k2).lon, LATLON_FORMAT); ")"
         Print #2, "Nod1=0,"; CStr(k1); ",0"
         Print #2, "Nod2=1,"; CStr(k2); ",0"
         Print #2, "[END]"
@@ -1019,7 +1024,7 @@ lBreak:
         'reverted oneway, save in backward sequence
         For i = ChainNum - 1 To 0 Step -1
             If i <> ChainNum - 1 Then Print #2, ",";
-            Print #2, "("; CStr(Nodes(Chain(i)).lat); ","; CStr(Nodes(Chain(i)).lon); ")";
+            Print #2, "("; Format(Nodes(Chain(i)).lat, LATLON_FORMAT); ","; Format(Nodes(Chain(i)).lon, LATLON_FORMAT); ")";
         Next
         Print #2,
         Print #2, "Nod1=0,"; CStr(Chain(ChainNum - 1)); ",0"
@@ -1028,7 +1033,7 @@ lBreak:
         'forward oneway or twoway, save in direct sequence
         For i = 0 To ChainNum - 1
             If i <> 0 Then Print #2, ",";
-            Print #2, "("; CStr(Nodes(Chain(i)).lat); ","; CStr(Nodes(Chain(i)).lon); ")";
+            Print #2, "("; Format(Nodes(Chain(i)).lat, LATLON_FORMAT); ","; Format(Nodes(Chain(i)).lon, LATLON_FORMAT); ")";
         Next
         Print #2,
         Print #2, "Nod1=0,"; CStr(Chain(0)); ",0"
@@ -1567,8 +1572,9 @@ End Sub
 
 
 'Load .mp file
+'Remove _link flags from polylines longer than MaxLinkLen
 '(loader is basic and rather stupid, uses relocation on file to read section info without internal buffering)
-Public Sub Load_MP(Filename As String)
+Public Sub Load_MP(Filename As String, MaxLinkLen As Double)
     Dim LogOptimization As Long
     Dim sLine As String
     Dim fLat As Double
@@ -1591,6 +1597,9 @@ Public Sub Load_MP(Filename As String)
     Dim routep() As String
     Dim LastCommentHighway As Long
     Dim label As String
+    Dim LinkLen As Double
+    Dim LastWayID As String
+    Dim NumDelinked As Long
     
     NodeIDMax = -1 'no nodeid yet
     
@@ -1606,6 +1615,8 @@ Public Sub Load_MP(Filename As String)
     iPrevLine = 0
     MPheader = ""
     LastCommentHighway = HIGHWAY_UNSPECIFIED
+    LastWayID = ""
+    NumDelinked = 0
     
 lNextLine:
     iPrevLine = Seek(1) 'get current position in file
@@ -1668,6 +1679,10 @@ lStartPoly:
                 'comment, produced by osm2mp
                 LastCommentHighway = GetHighwayType(Trim(Mid(sLine, 12, Len(sLine))))
             End If
+            If Left(Trim(sLine), 7) = "; WayID" Then
+                'comment, produced by osm2mp
+                LastWayID = Trim(sLine)
+            End If
             If SectionType = 1 Then
                 'line of header section
                 MPheader = MPheader + sLine + vbNewLine
@@ -1680,7 +1695,8 @@ lStartPoly:
                 WaySpeed = Val(routep(0)) 'direct copy of speed
                 WayOneway = Val(routep(2)) 'and oneway
                 If LastCommentHighway = HIGHWAY_UNSPECIFIED Then
-                    WayClass = 3 'default class
+                    'WayClass = 3 'default class
+                    WayClass = HIGHWAY_SECONDARY
                     'TODO: should be detected by Type and WayClass
                 Else
                     'get class from osm2mp comment
@@ -1742,6 +1758,8 @@ lSkipRoadNode:
             DataLineNum = DataLineNum + 1
             
             ThisLineNodes = 0
+            LinkLen = 0
+            ChainNum = 0
             
 lNextPoint:
             'get lat-lon coords from line
@@ -1771,6 +1789,21 @@ lNextPoint:
                     'were not specified
                     Edges(j).speed = 3 '56km/h
                 End If
+                
+                If (WayClass And HIGHWAY_MASK_LINK) > 0 Then
+                    LinkLen = LinkLen + Distance(NodesNum - 1, NodesNum)
+                    If LinkLen > MaxLinkLen Then
+                        WayClass = WayClass And HIGHWAY_MASK_MAIN
+                        Edges(j).roadtype = WayClass
+                        For i = 0 To ChainNum - 1
+                            Edges(Chain(i)).roadtype = WayClass
+                        Next
+                        'Debug.Print LastWayID; " - "; CStr(LinkLen) 'uncomment to log list of ways
+                        NumDelinked = NumDelinked + 1
+                    Else
+                        Call AddChain(j)
+                    End If
+                End If
             End If
             ThisLineNodes = ThisLineNodes + 1
             
@@ -1790,6 +1823,8 @@ lNoData:
     If Not EOF(1) Then GoTo lNextLine
     
     Close #1
+    ChainNum = 0
+    'Debug.Print "De-_link-ed: "; NumDelinked 'uncomment to log number of ways
 
 End Sub
 
@@ -3931,7 +3966,7 @@ Public Sub OptimizeRouting(InputFile As String)
     Call init
     
     'Load data from file
-    Call Load_MP(InputFile)
+    Call Load_MP(InputFile, 1200)
     DoEvents
     
     'Join nodes by NodeID
