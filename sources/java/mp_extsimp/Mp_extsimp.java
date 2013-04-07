@@ -79,9 +79,10 @@ history
 2013.01.28 - fixed deadlock in SaveChain in case of isolated road cycle
 
 2013.02.03 - Completed porting to java (freeExec - https://github.com/freeExec/mp_extsimp)
-
+2012.02.28 - added MaxLinkLen to Load_MP() include (2013.03.02, 2013.03.03)
+ 
 TODO:
-*? dump problems of OSM data (1: too long links, 2: ?)
+*? dump problems of OSM data (1: too long links (ready), 2: ?)
 '? 180/-180 safety */
 package mp_extsimp;
 
@@ -214,7 +215,7 @@ public class Mp_extsimp {
         initArrays();
 
         //Load data from file
-        load_MP(inputFile);
+        load_MP(inputFile, 1200);
 
         //Join nodes by NodeID
         joinNodesByID();
@@ -301,8 +302,9 @@ public class Mp_extsimp {
     }
 
     //Load .mp file
+    // Remove _link flags from polylines longer than MaxLinkLen
     //(loader is basic and rather stupid, uses relocation on file to read section info without internal buffering)
-    public static void load_MP(String filename) {
+    public static void load_MP(String filename, double maxLinkLen) {
         //int logOptimization = 0;
         String sLine = "";
         double fLat = 0;
@@ -329,6 +331,8 @@ public class Mp_extsimp {
         String[] routep;
         byte lastCommentHighway = 0;
         String label = "";
+        
+        double linkLen = 0;
         
         int originalLenLine = 0;
 
@@ -418,22 +422,8 @@ public class Mp_extsimp {
                         MPheader = MPheader + sLine + "\r\n";
                     }
                     if (waySpeed != -1 && addedNodes.size() > 0 && addedEdges.size() > 0) {
-                            Nodes.addAll(addedNodes);
-                            Edges.addAll(addedEdges);
-                    } else {
-                // delete after fix
-autoINCNodesNum -= addedNodes.size();
-                    }
-                    //if (iPhase > 0 && iPhase < 3) {
-                        //not last pass of section -> goto start of it
-                        //relocate in file
-
-                        //Seek(1, iStartLine);
-                        //fis.getChannel().position(iStartLine);
-                        //System.out.printf("Reset: %1$d / %2$d\n", iPrevLine , originalLenLine);
-                        //iPrevLine = iStartLine;
-                        //br.reset();
-                        //iPhase = iPhase + 1;
+                        linkLen = 0;                        
+                        boolean fixLink = false;
                         // замена параметров
                         for (Edge edgeI: addedEdges) {
                             edgeI.oneway = wayOneway;
@@ -449,10 +439,49 @@ autoINCNodesNum -= addedNodes.size();
                                 //Edges[j].speed = 3;
                                 edgeI.speed = 3;
                             }
+                            if ((wayClass & Highway.HIGHWAY_MASK_LINK) != 0 && !fixLink) {
+                                linkLen += Node.distance(edgeI.node2, edgeI.node1);// Distance(NodesNum - 1, NodesNum)
+                                if (linkLen > maxLinkLen) {
+                                    wayClass &= Highway.HIGHWAY_MASK_MAIN;
+                                    //edgeI.roadtype &= Highway.HIGHWAY_MASK_MAIN;
+                                    // исправляем тип всем предыдущим и отменяем проверку для последующих
+                                    fixLink = true;
+                                    for (Edge edgeI2: addedEdges) {
+                                        edgeI.roadtype = wayClass;
+                                        if (edgeI2.equals(edgeI)) break;
+                                    }
+                                    //for (Node nodeI: Chain)
+                                    //    Edges(Chain(i)).roadtype = WayClass
+                                    //'Debug.Print LastWayID; " - "; CStr(LinkLen) 'uncomment to log list of ways
+                                    //numDelinked++;
+                                } else {
+                                    //Call AddChain(j)
+                                }
+                                
+                            }
                         }
+                        
+                        
+                        Nodes.addAll(addedNodes);
+                        Edges.addAll(addedEdges);
+                    } else {
+                // delete after fix
+autoINCNodesNum -= addedNodes.size();
+                    }
+                    //if (iPhase > 0 && iPhase < 3) {
+                        //not last pass of section -> goto start of it
+                        //relocate in file
 
-                        addedNodes.clear();
-                        addedEdges.clear();                        
+                        //Seek(1, iStartLine);
+                        //fis.getChannel().position(iStartLine);
+                        //System.out.printf("Reset: %1$d / %2$d\n", iPrevLine , originalLenLine);
+                        //iPrevLine = iStartLine;
+                        //br.reset();
+                        //iPhase = iPhase + 1;
+                    
+
+                    addedNodes.clear();
+                    addedEdges.clear();                        
                     //}
                     //no routing params found in 1st pass - skip way completely
                     //if (iPhase == 1  && (waySpeed == -1)) { 
@@ -465,6 +494,8 @@ autoINCNodesNum -= addedNodes.size();
                     label = "";
                     //iPhase = 0;
                     sectionType = 0;
+                    //numDelinked = 0;
+
     //*TODO:** goto found: GoTo lNextLine;
                     continue;
                 }
@@ -494,7 +525,8 @@ autoINCNodesNum -= addedNodes.size();
                             wayOneway = Byte.parseByte(routep[2]);
                             if (lastCommentHighway == Highway.HIGHWAY_UNSPECIFIED) {
                                 //default class
-                                wayClass = 3;
+                                //wayClass = 3;
+                                wayClass = Highway.HIGHWAY_SECONDARY;
                                 //TODO: should be detected by Type and WayClass
                             }
                             else {
