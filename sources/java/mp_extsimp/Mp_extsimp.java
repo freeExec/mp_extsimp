@@ -271,30 +271,30 @@ public class Mp_extsimp {
     private static void initArrays() {
         //NodesAlloc = 1000;
         //Nodes = new node[NodesAlloc];
-        Nodes = new ArrayList<>();
+        Nodes = new ArrayList<>(100000);
         //NodesNum = 0;   -> Nodes.size();
 
         //EdgesAlloc = 1000;
         //Edges = new edge[EdgesAlloc];
-        Edges = new ArrayList<>();
+        Edges = new ArrayList<>(100000);
         //EdgesNum = 0;
 
-        Chain = new ArrayList<>();
+        Chain = new ArrayList<>(100000);
         /* ChainAlloc = 1000;
         Chain = new int[ChainAlloc];
         ChainNum = 0;*/
 
         //AimEdges = new ArrayList<>();
 
-        LabelStats = new ArrayList<>();
+        LabelStats = new ArrayList<>(100);
 
         /*TWalloc = 100;
         TWforw = new int[TWalloc];
         TWback = new int[TWalloc];
         TWbackNum = 0;
         TWforwNum = 0;*/
-        TWforw = new ArrayList<>();
-        TWback = new ArrayList<>();
+        TWforw = new ArrayList<>(10000);
+        TWback = new ArrayList<>(10000);
 
         SpeedHistogram = new int[11];
 
@@ -880,6 +880,12 @@ autoINCNodesNum -= addedNodes.size();
         //*TODO:** goto found: GoTo lSkipEdge;
                 continue;
             }
+            // так как половина времени циклы возравщаются по continue
+            if ((i & 8191) == 0) {
+                //show progress
+                //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
+                System.out.printf("JDS: %1$d / %2$d\r\n", i, Edges.size());
+            }
 
             //get bbox
             //bbox_edge = getEdgeBbox(i);
@@ -1249,12 +1255,6 @@ autoINCNodesNum -= addedNodes.size();
             edgeI.mark = 1;
 
 //*TODO:** label found: lSkipEdge:;
-
-            if ((i & 8191) == 0) {
-                //show progress
-                //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                System.out.printf("JDS: %1$d / %2$d\r\n", i, Edges.size());
-            }
         }
     }
 
@@ -1820,13 +1820,19 @@ autoINCNodesNum -= addedNodes.size();
             DecimalFormatSymbols dfs = new DecimalFormatSymbols();
             dfs.setDecimalSeparator('.');
             numFormat.setDecimalFormatSymbols(dfs);
-                    
+
+            int count = 0;
             for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
                 if (kEdgeN.mark == 0) {
                     //all marked to save - find chain and save
                     bw.write(saveChain(kEdgeN));
                 }
+                if (((count++) & 8191) == 0) {
+                    //show progress
+                    //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
+                    System.out.printf("Save: %1$d / %2$d\r\n", count, Edges.size());
+                }                
             }
 
             //file finalization flag
@@ -2618,7 +2624,7 @@ autoINCNodesNum -= addedNodes.size();
             for (int i = 0; i < joinGroups; i++) {
                 joiningNodes = 0;
                 //AimEdgesNum = 0;
-                AimEdges = new ArrayList<>();
+                AimEdges = new ArrayList<>(200);
 
                 //first
                 boolean mode1 = false;
