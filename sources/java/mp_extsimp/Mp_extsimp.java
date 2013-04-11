@@ -1253,7 +1253,7 @@ autoINCNodesNum -= addedNodes.size();
             if ((i & 8191) == 0) {
                 //show progress
                 //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                System.out.printf("JDS: %1$d / %2$d\r", i, Edges.size());
+                System.out.printf("JDS: %1$d / %2$d\r\n", i, Edges.size());
             }
         }
     }
@@ -1611,19 +1611,24 @@ autoINCNodesNum -= addedNodes.size();
                 int i = Chain.size()-1;
                 while(true) {
                     Node iChain = Chain.get(i);
-                    for (int j = 0; j < i; j++) {
+                    int j = 0;
+                    for (; j < i; j++) {
                         if (iChain.equals(Chain.get(j))) {
             //*TODO:** goto found: GoTo lFound;
                             i--;
-                            Chain.remove(iChain);
                             break;
                         }
+                    }
+                    if (j == i) {
+                        for (j = Chain.size() - 1; j > i + 1; j--) {
+                            Chain.remove(j);
+                        }
+                        break;
                     }
                     //not found
                     //keep this node (which is one time in chain) and next one (which is two times)
                     // TODO: не понятка как это толком энтерпретировать. Переделал два фора, в один фор и ваил, где регулирование индекса идет в форе
                     //ChainNum = i + 2;
-                    break;
                     //*TODO:** goto found: GoTo lExit;
         //*TODO:** label found: lFound:;
                 }
