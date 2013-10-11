@@ -219,7 +219,7 @@ public class Mp_extsimp {
 
         //Join nodes by NodeID
         joinNodesByID();
-
+System.out.println();
         //Join two way roads into bidirectional ways
         joinDirections3(70, -0.996, -0.95, 100, 2);
         //70 metres between directions (Ex: Universitetskii pr, Moscow - 68m)
@@ -227,38 +227,40 @@ public class Mp_extsimp {
         //-0.95 -> (161.8, 180) degrees for further contradirectional checks
         //100 metres min two way road
         //2 metres for joining nodes into one
-
+System.out.println();
         filterVoidEdges();
 
         //Optimize all roads by (Ramer-)Douglas Peucker algorithm with limiting edge len
         douglasPeucker_total_split(5, 100);
         //Epsilon = 5 metres
         //Max edge - 100 metres
-
+System.out.println();
         collapseJunctions2(1000, 1200, 0.13);
         //Slide allowed up to 1000 metres
         //Max junction loop is 1200 metres
         //0.13 -> ~ 7.46 degress
-
+System.out.println();
         filterVoidEdges();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
         douglasPeucker_total(5);
         //Epsilon = 5 metres
-
+System.out.println();
         //Join edges with very acute angle into one
         joinAcute(100, 3);
         //100 metres for joining nodes
         //AcuteKoeff = 3 => 18.4 degrees
-
+System.out.println();
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
         douglasPeucker_total(5);
         //Epsilon = 5 metres
-
+System.out.println();
         //Remove very short edges, they are errors, most probably
         CollapseShortEdges(3);
         //CollapseDistance = 3 metres
-        
+System.out.println();        
+
+filterVoidEdges();
         //Save result
         save_MP_2(outFile);
 
@@ -753,7 +755,7 @@ autoINCNodesNum -= addedNodes.size();
                 if ((i & 8191) == 0) {  //8191
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    System.out.printf("Join soft %1$d / %2$d\n", i, Nodes.size());
+                    System.out.printf("Join soft %1$d / %2$d\r", i, Nodes.size());
                 }
 
             }
@@ -794,7 +796,7 @@ autoINCNodesNum -= addedNodes.size();
                 if ((i & 8191) == 0) {
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    System.out.printf("Join hard %1$d / %2$d\n", i, NodesNum);
+                    System.out.printf("Join hard %1$d / %2$d\r", i, NodesNum);
                 }
             }
         }
@@ -884,7 +886,7 @@ autoINCNodesNum -= addedNodes.size();
             if ((i & 8191) == 0) {
                 //show progress
                 //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                System.out.printf("JDS: %1$d / %2$d\r\n", i, Edges.size());
+                System.out.printf("JD3: %1$d / %2$d\r", i, Edges.size());
             }
 
             //get bbox
@@ -1785,6 +1787,88 @@ autoINCNodesNum -= addedNodes.size();
                 // TODO возможно стоит добавить удаление сомого edgeI
             }
         }
+        /*int countNodes = 0;
+        int countEdges = 0;
+        for (i = Edges.size() - 1; i >=0 ; i--) {
+            Edge edgeI = Edges.get(i);
+            Node delNode1 = edgeI.node1;
+            Node delNode2 = edgeI.node2;
+            if ((delNode1 != null) && (delNode1 == delNode2)) {                
+                edgeI.delEdge();
+                // добавил удаление сомого edgeI
+                Edges.remove(i);
+                countEdges++;
+            } else if (delNode1 == null && delNode2 == null) {
+                Edges.remove(i);
+                countEdges++;
+            }
+            // добавил удаление одинокой ноды
+            if (delNode1 != null && delNode1.edgeL.size() == 0) {
+                Nodes.remove(delNode1);
+                countNodes++;
+            }
+            if (delNode1 != null && delNode2.edgeL.size() == 0) {
+                Nodes.remove(delNode2);
+                countNodes++;
+            }
+            if ((i & 8191) == 0) {
+                System.out.printf("Clean N/E: %1$d / %2$d. Exist N/E: %3$d / %4$d - %5$d   \r", countNodes, countEdges, Nodes.size(), Edges.size(), i);
+            }
+        }
+        System.out.printf("Clean N/E: %1$d / %2$d. Exist N/E: %3$d / %4$d\r\n", countNodes, countEdges, Nodes.size(), Edges.size());*/
+        // перемещение пустых в конец
+        /*int countEdges = 0;
+        for (i = Edges.size() - 1; i >=0 ; i--) {
+            Edge edgeI = Edges.get(i);
+            Node delNode1 = edgeI.node1;
+            Node delNode2 = edgeI.node2;
+            if ((delNode1 != null) && (delNode1 == delNode2)) {                
+                edgeI.delEdge();
+                // добавил удаление сомого edgeI
+                //Edges.remove(i);
+                Edges.set(i, Edges.get(Edges.size() - 1));
+                Edges.remove(Edges.size() - 1);
+                countEdges++;
+            } else if (delNode1 == null && delNode2 == null) {
+                Edges.set(i, Edges.get(Edges.size() - 1));
+                Edges.remove(Edges.size() - 1);
+                countEdges++;
+            }
+            if ((i & 8191) == 0) {
+                System.out.printf("Clean Edges: %1$d Left: %2$d   \r", countEdges, Edges.size());
+            }
+        }*/
+        // самостоятельное перемещение
+        int countEdges = 0;
+        int curIndex = 0;
+        for (i = 0; i < Edges.size(); i++) {
+            Edge edgeI = Edges.get(i);
+            Node delNode1 = edgeI.node1;
+            Node delNode2 = edgeI.node2;
+            if ((delNode1 != null) && (delNode1 == delNode2)) {                
+                edgeI.delEdge();
+                // добавил удаление сомого edgeI
+                //Edges.remove(i);
+//                    Edges.set(i, Edges.get(Edges.size() - 1));
+//                    Edges.remove(Edges.size() - 1);
+                curIndex = i;
+                countEdges++;
+            } else if (delNode1 == null && delNode2 == null) {
+//                Edges.set(i, Edges.get(Edges.size() - 1));
+//                Edges.remove(Edges.size() - 1);
+                countEdges++;
+            } else if (curIndex != i) {
+                Edges.set(curIndex++, Edges.get(i));
+            }
+
+            if ((i & 8191) == 0) {
+                System.out.printf("Clean Edges: %1$d Left: %2$d   \r", countEdges, Edges.size());
+            }
+        }
+        for (i = Edges.size() - 1; i >= curIndex ; i--) {
+            Edges.remove(i);
+        }
+        System.out.printf("Clean Edges: %1$d Left: %2$d              \n", countEdges, Edges.size());
     }
 
     //Save geometry to .mp file with joining chains into polylines
@@ -1805,7 +1889,7 @@ autoINCNodesNum -= addedNodes.size();
             bw.write(MPheader);
             bw.newLine();
 
-            for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
+            /*for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
                 if (kEdgeN.node1 == null) {
                     //deleted edge
@@ -1815,7 +1899,7 @@ autoINCNodesNum -= addedNodes.size();
                     //mark to save
                     kEdgeN.mark = 0;
                 }
-            }
+            }*/
             numFormat = new DecimalFormat("0.#######");
             DecimalFormatSymbols dfs = new DecimalFormatSymbols();
             dfs.setDecimalSeparator('.');
@@ -1824,14 +1908,14 @@ autoINCNodesNum -= addedNodes.size();
             int count = 0;
             for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
-                if (kEdgeN.mark == 0) {
+                if (kEdgeN.node1 != null) {
                     //all marked to save - find chain and save
                     bw.write(saveChain(kEdgeN));
                 }
                 if (((count++) & 8191) == 0) {
                     //show progress
                     //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                    System.out.printf("Save: %1$d / %2$d\r\n", count, Edges.size());
+                    System.out.printf("Save: %1$d / %2$d\r", count, Edges.size());
                 }                
             }
 
@@ -2166,7 +2250,7 @@ autoINCNodesNum -= addedNodes.size();
 //*TODO:** label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.print("Doug-Pek sp " + nodeI.VBNum + " / " + Nodes.size() + "\r");
+                System.out.printf("Doug-Pek sp %1$d / %2$d\r", nodeI.VBNum, Nodes.size());
             }
         }
     }
@@ -2481,10 +2565,10 @@ autoINCNodesNum -= addedNodes.size();
                 }
                 if ((k++ & 65535) == 0) {
                     //display progress
-                    System.out.println("Collapse " + passNumber + ", Shorts " + k + " / " + Edges.size());
+                    System.out.printf("Collapse %1$d, Shorts %2$d / %3$d\r", passNumber, k, Edges.size());
                 }
             }
-
+System.out.println();
             for (Node nodeI: Nodes) {
                 //not in join group
                 nodeI.mark = -1;
@@ -2556,7 +2640,7 @@ autoINCNodesNum -= addedNodes.size();
                 }
                 if ((nodeI.VBNum & 8191) == 0) {
                     //show progress
-                    System.out.println("Collapse " + passNumber + ", Shrink " + nodeI.VBNum + " / " + Nodes.size());
+                    System.out.printf("Collapse %1$d, Shrink %2$d / %3$d\r", passNumber, nodeI.VBNum, Nodes.size());
                 }
             }
 
@@ -2725,7 +2809,7 @@ autoINCNodesNum -= addedNodes.size();
                     nodeJ.delNode();
                 }
                 if ((nodeJ.VBNum & 8191) == 0) {
-                    System.out.println("Collapse " + passNumber + ", Del " + nodeJ.VBNum + " / " + Nodes.size());
+                    System.out.printf("Collapse %1$d, Del %2$d / %3$d\r", passNumber, nodeJ.VBNum, Nodes.size());
                 }
             }
 
@@ -3272,7 +3356,7 @@ autoINCNodesNum -= addedNodes.size();
 //label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.println("Doug-Pek " + nodeI.VBNum + " / " + Nodes.size());
+                System.out.printf("Doug-Pek %1$d / %2$d\r", nodeI.VBNum, Nodes.size());
             }
         }
     }
@@ -3695,7 +3779,7 @@ autoINCNodesNum -= addedNodes.size();
 
                 if ((nodeI.VBNum & 8191) == 0) {
                     //show progress
-                    System.out.println("JA #" + passNumber + " : " + nodeI.VBNum + " / " + Nodes.size());
+                    System.out.printf("JA #%1$d : %2$d / %3$d\r", passNumber, nodeI.VBNum, Nodes.size());
                 }
             }
 
@@ -3704,7 +3788,7 @@ autoINCNodesNum -= addedNodes.size();
                 passNumber++;
                 //show progress
                 //Form1.Caption = "JoinAcute " + CStr(passNumber) + ": " + CStr(merged);
-                System.out.println("JoinAcute " + passNumber + ": " + merged);
+                System.out.printf("\nJoinAcute %1$d : %2$d\n", passNumber, merged);
         //*TODO:** goto found: GoTo lIteration;
                 continue;
             }
@@ -3736,7 +3820,7 @@ autoINCNodesNum -= addedNodes.size();
                 }
                 if ((i++ & 8191) == 0) {
                     //show progress
-                    System.out.println("CSE " + i + " / " + Edges.size());
+                    System.out.printf("CSE %1$d / %2$d\r", i, Edges.size());
                 }
             }
         }
