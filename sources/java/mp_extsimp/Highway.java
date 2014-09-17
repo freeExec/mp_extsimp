@@ -33,12 +33,15 @@ public class Highway {
     public static final int HIGHWAY_UNKNOWN = 22;
     public static final int HIGHWAY_UNSPECIFIED = 24;
 
+    public static int CONTROL_TRUNKTYPE = 1;        // set 1 to be have same as motorway 
+    public static int CONTROL_TRUNLINKKTYPE = 9;    // set 9 to have same as motorway
+    public static int CONTROL_PRIMARYTYPE = 2;      // set 2 to use 0x02 Principal highway
+    
     //Masks
     //all links
     public static final int HIGHWAY_MASK_LINK = 1;
     //get main type (removes _link)
     public static final int HIGHWAY_MASK_MAIN = 254;
-
     
         //Parse OSM highway class to our own constants
     public static byte getHighwayType(String text) {
@@ -111,13 +114,13 @@ public class Highway {
                 _rtn = 9;
                 break;
             case  HIGHWAY_TRUNK:
-                _rtn = 1;
+                _rtn = CONTROL_TRUNKTYPE;
                 break;
             case  HIGHWAY_TRUNK_LINK:
-                _rtn = 9;
+                _rtn = CONTROL_TRUNLINKKTYPE;
                 break;
             case  HIGHWAY_PRIMARY:
-                _rtn = 2;
+                _rtn = CONTROL_PRIMARYTYPE;
                 break;
             case  HIGHWAY_PRIMARY_LINK:
                 _rtn = 8;
@@ -160,6 +163,26 @@ public class Highway {
                 break;
         }
         return _rtn;
+    }
+    
+    public static byte getTypeFromMP(int mpType) {
+        switch (mpType)
+        {
+            case 01:                        //Major highway
+                return HIGHWAY_MOTORWAY;
+            case 02:                        //Principal highway
+                return HIGHWAY_TRUNK;
+            case 03:                        //Other highway road
+                return HIGHWAY_PRIMARY;
+            
+            //block for simplification of borders
+            case 0x1e:                      //Country border
+                return HIGHWAY_PRIMARY;
+            case 0x1C:                      //State/region border
+                return HIGHWAY_SECONDARY;
+            default:
+                return HIGHWAY_SECONDARY;
+        }
     }
 
     //Convert constants to top level for visibility

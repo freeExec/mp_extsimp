@@ -13,8 +13,7 @@ import java.util.ArrayList;
 public class Clusters {
 
 // Consts
-    //Cluster size in degrees for ClusterIndex build and search
-    public static final double CLUSTER_SIZE = 0.05;
+
 
 // Fields
     public static ArrayList<Node> extLinkNodes;
@@ -40,6 +39,8 @@ public class Clusters {
     public static int ClustersFindLastCluster = 0;
 
     public static int ClustersFindLastNode = 0;
+    
+    public static float CONTROL_CLUSTER_SIZE  = 0.05f;   //0.05 degrees for local maps, 1 for planet-s
 
     public static void init(ArrayList<Node> nodes) {
         extLinkNodes = nodes;
@@ -89,8 +90,8 @@ public class Clusters {
             if (wholeBbox.lat_max < wholeBbox.lat_min || wholeBbox.lon_max < wholeBbox.lon_min) { return; }
 
             //calc number of clusters
-            ClustersLatNum = (int)Math.round(1 + (wholeBbox.lat_max - wholeBbox.lat_min) / CLUSTER_SIZE);
-            ClustersLonNum = (int)Math.round(1 + (wholeBbox.lon_max - wholeBbox.lon_min) / CLUSTER_SIZE);
+            ClustersLatNum = (int)Math.round(1 + (wholeBbox.lat_max - wholeBbox.lat_min) / CONTROL_CLUSTER_SIZE);
+            ClustersLonNum = (int)Math.round(1 + (wholeBbox.lon_max - wholeBbox.lon_min) / CONTROL_CLUSTER_SIZE);
 
             /*
             //starts of chains
@@ -121,8 +122,8 @@ public class Clusters {
             Node iNode = extLinkNodes.get(i);
             if (iNode.nodeID != Mark.MARK_NODEID_DELETED) {
                 //get cluster from lat/lon
-                x = (int)Math.round((iNode.lat - ClustersLat0) / CLUSTER_SIZE);
-                y = (int)Math.round((iNode.lon - ClustersLon0) / CLUSTER_SIZE);
+                x = (int)Math.round((iNode.lat - ClustersLat0) / CONTROL_CLUSTER_SIZE);
+                y = (int)Math.round((iNode.lon - ClustersLon0) / CONTROL_CLUSTER_SIZE);
                 j = x + y * ClustersLatNum;
 
                 k = ClustersLast[j];
@@ -158,10 +159,19 @@ public class Clusters {
             //first node needed
 
             //get coordinates of all needed clusters
-            x1 = (int)Math.round((box1.lat_min - ClustersLat0) / CLUSTER_SIZE);
-            x2 = (int)Math.round((box1.lat_max - ClustersLat0) / CLUSTER_SIZE);
-            y1 = (int)Math.round((box1.lon_min - ClustersLon0) / CLUSTER_SIZE);
-            y2 = (int)Math.round((box1.lon_max - ClustersLon0) / CLUSTER_SIZE);
+            x1 = (int)Math.round((box1.lat_min - ClustersLat0) / CONTROL_CLUSTER_SIZE);
+            x2 = (int)Math.round((box1.lat_max - ClustersLat0) / CONTROL_CLUSTER_SIZE);
+            y1 = (int)Math.round((box1.lon_min - ClustersLon0) / CONTROL_CLUSTER_SIZE);
+            y2 = (int)Math.round((box1.lon_max - ClustersLon0) / CONTROL_CLUSTER_SIZE);
+            
+            if (x1 < 0) x1 = 0;
+            if (x2 < 0) x2 = 0;
+            if (x1 >= ClustersLatNum) x1 = ClustersLatNum - 1;
+            if (x2 >= ClustersLatNum) x2 = ClustersLatNum - 1;
+            if (y1 < 0) y1 = 0;
+            if (y2 < 0) y2 = 0;
+            if (y1 >= ClustersLonNum) y1 = ClustersLonNum - 1;
+            if (y2 >= ClustersLonNum) y2 = ClustersLonNum - 1;
 
             //store bbox for next searches
             ClustersFindLastBbox = box1;
@@ -175,11 +185,20 @@ public class Clusters {
             }
 
             //get coordinates of all needed clusters
-            x1 = (int)Math.round((ClustersFindLastBbox.lat_min - ClustersLat0) / CLUSTER_SIZE);
-            x2 = (int)Math.round((ClustersFindLastBbox.lat_max - ClustersLat0) / CLUSTER_SIZE);
+            x1 = (int)Math.round((ClustersFindLastBbox.lat_min - ClustersLat0) / CONTROL_CLUSTER_SIZE);
+            x2 = (int)Math.round((ClustersFindLastBbox.lat_max - ClustersLat0) / CONTROL_CLUSTER_SIZE);
             //y1 = (int)Math.round((ClustersFindLastBbox.lon_min - ClustersLon0) / CLUSTER_SIZE);
-            y2 = (int)Math.round((ClustersFindLastBbox.lon_max - ClustersLon0) / CLUSTER_SIZE);
+            y2 = (int)Math.round((ClustersFindLastBbox.lon_max - ClustersLon0) / CONTROL_CLUSTER_SIZE);
 
+            if (x1 < 0) x1 = 0;
+            if (x2 < 0) x2 = 0;
+            if (x1 >= ClustersLatNum) x1 = ClustersLatNum - 1;
+            if (x2 >= ClustersLatNum) x2 = ClustersLatNum - 1;
+            //if (y1 < 0) y1 = 0;
+            if (y2 < 0) y2 = 0;
+            //if (y1 >= ClustersLonNum) y1 = ClustersLonNum - 1;
+            if (y2 >= ClustersLonNum) y2 = ClustersLonNum - 1;            
+            
             //get coordinates of last used cluster
             x = ClustersFindLastCluster % ClustersLatNum;   // Mod
             y = (int)((ClustersFindLastCluster - x) / ClustersLatNum);  // было целое деление или как-то так "\"

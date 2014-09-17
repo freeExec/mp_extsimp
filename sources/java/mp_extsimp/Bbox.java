@@ -51,6 +51,7 @@ public class Bbox {
         cos2 = Math.cos(bbox1.lat_max * DEGTORAD);
         //'smallest cos() - further from equator
         if (cos2 < cos1) { cos1 = cos2; }
+        if (cos1 < 0.01f) { cos1 = 0.01f; } //beyond 89' lat, ex. Antarctic Territories
         //'distance in degrees of longtitue
         dist_angle = dist_angle / cos1;
         bbox1.lon_min -= dist_angle;

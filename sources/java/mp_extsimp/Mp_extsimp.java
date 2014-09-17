@@ -3,6 +3,7 @@
  mp_extsimp
  Generalization of complex junctions and two ways roads
  from OpenStreetMap data
+ Also a toolbox for other generalization procedures
 
  Copyright © 2012-2013 OverQuantum
 
@@ -25,6 +26,8 @@
 
  Project homepage:
  https://github.com/OverQuantum/mp_extsimp
+ Java version:
+ https://github.com/freeExec/mp_extsimp
 
 
  OpenStreetMap data licensed under the Open Data Commons Open Database License (ODbL).
@@ -80,10 +83,32 @@ history
 
 2013.02.03 - Completed porting to java (freeExec - https://github.com/freeExec/mp_extsimp)
 2012.02.28 - added MaxLinkLen to Load_MP() include (2013.03.02, 2013.03.03)
+
+2013-09-30 - fixed bug in GetNodeInBboxByCluster on bbox were out of clustered bbox
+2013-09-30 - added consts FORCEWAYSPEED, TRUNK_TYPE, TRUNK_LINK_TYPE and LOAD_NOROUTING
+2013-10-01 - fixed deadlock in DouglasPeucker_chain and _split on isolated two-road cycle
+2013-10-01 - changed form1 to use Form_Load, now program can be run minimized (ex. using "start /MIN")
+2013-10-01 - added JoinCloseNodes(), CombineDuplicateEdgesAll() and RemoveOneWay()
+2013-10-02 - changed edge() to dynamic array
+2013-10-02 - changed realloc of Nodes and Edges to +1M after 1M
+2013-10-02 - added loading of mp Type field, controlled by const LOAD_TYPE
+2013-10-02 - added loading of polygons
+2013-10-02 - fixed ExpandBbox for beyond +-89 degrees
+2013-10-03 - fixed loading of mp Type if no comments
+-2013-10-05 - added loading and saving of lined OSM file
+-2013-10-05 - added AddNodeToClusterIndex and sorting of nodes by ele
+2013-10-08 - changed control consts to Control_* variables
+2013-10-08 - added showing function params in form caption
+2013-10-08 - added Control_TrunkLinkType
+-2013-10-08 - added TrimByBbox, FileLen_safe
+-2013-10-09 - added StitchNodes
+2013-10-10 - commented and regression checked with 2013-03-03 version
+ 
  
 TODO:
 *? dump problems of OSM data (1: too long links (ready), 2: ?)
-'? 180/-180 safety */
+? 180/-180 safety (currently works fine with planet wide data, but could fail on parallel-wide */
+
 package mp_extsimp;
 
 import java.io.*;
@@ -174,17 +199,22 @@ public class Mp_extsimp {
 //    public static int ClustersFindLastNode = 0;
 */
     public static DecimalFormat numFormat;
+    private static StringBuilder stringBuilder;
 
     //speed of chain after last call of EstimateChain()
     public static int EstimateChain_speed = 0;
     //label of chain after last call of EstimateChain()
     public static String EstimateChain_label = "";
     
+    static boolean CONTROL_LOAD_NO_ROUTE = false;   //set false to skip no-routing polylines, true to load 
+    static byte CONTROL_FORCE_WAYSPEED = -1;        // set -1 to not force, 0 or more to forcing this value
+    static boolean CONTROL_LOAD_MP_TYPE = false;    // set false to skip mp Type= field, true to parse
+    
     public static void main(String[] args) {
         //Locale.setDefault(Locale.ENGLISH);
         System.out.println("Generalization of complex junctions and two ways roads from OpenStreetMap data\n" +
             "Copyright 2012-2013 OverQuantum\n" + 
-            "Version: 0.2    Java porting freeExec\n");
+            "Version: 0.25   Java porting freeExec  2014\n");
         if (args.length != 1) {
             System.out.print("Usages: mp_extsimp filename.mp\n");
         } else {
@@ -192,6 +222,8 @@ public class Mp_extsimp {
         }
     }
     
+    //Root function of optimization
+    //Main generic version for optimizing highways and junctions
     private static void optimizeRouting(String inputFile) {
         String outFile = "";
         //String outFile2 = "";
@@ -201,8 +233,9 @@ public class Mp_extsimp {
         //System.out.println(String.format("%f\n", 8742.547820d));
         //DecimalFormat nf = new DecimalFormat("0.#######");
         //System.out.println(nf.format(37.6170351227685d));
-        //nothing to do
+        //no file - nothing to do
         if (inputFile.isEmpty()) { return; }
+        if (new File(inputFile).length() < 1) { return; }   //empty or missing file
 
         //output file
         outFile = inputFile + "_opt.mp";
@@ -229,7 +262,7 @@ System.out.println();
         //2 metres for joining nodes into one
 System.out.println();
         filterVoidEdges();
-
+System.out.println();
         //Optimize all roads by (Ramer-)Douglas Peucker algorithm with limiting edge len
         douglasPeucker_total_split(5, 100);
         //Epsilon = 5 metres
@@ -241,6 +274,8 @@ System.out.println();
         //0.13 -> ~ 7.46 degress
 System.out.println();
         filterVoidEdges();
+        
+        combineDuplicateEdgesAll();
 
         //Optimize all roads by (Ramer)DouglasPeucker algorithm
         douglasPeucker_total(5);
@@ -256,17 +291,22 @@ System.out.println();
         //Epsilon = 5 metres
 System.out.println();
         //Remove very short edges, they are errors, most probably
-        CollapseShortEdges(3);
+        collapseShortEdges(3);
         //CollapseDistance = 3 metres
 System.out.println();        
+        
+        filterVoidEdges();
+System.out.println();
 
-filterVoidEdges();
+        long time2 = System.currentTimeMillis();
+        System.out.printf(Locale.ROOT, "Done optimize: %1$tM min or %ts sec\n",  time2 - time1);
+
         //Save result
         save_MP_2(outFile);
 
         //display timing
-        long time2 = System.currentTimeMillis();
-        System.out.printf("Done %1$tT s",  time2 - time1);
+        time2 = System.currentTimeMillis();
+        System.out.printf(Locale.ROOT, "Done: %1$tM min or %ts sec\n",  time2 - time1);
     }
 
     //Init module (all arrays)
@@ -301,6 +341,8 @@ filterVoidEdges();
         SpeedHistogram = new int[11];
 
         Clusters.init(Nodes);
+        
+        stringBuilder = new StringBuilder(4096*4);
     }
 
     //Load .mp file
@@ -323,7 +365,7 @@ filterVoidEdges();
         //String sPrefix = "";
         int dataLineNum = 0;
         int k, k2, k3;
-        long p;
+        Node firstNodeOfWay = null;
         //int i, j;
         int thisLineNodes = 0;
         int nodeID = 0;
@@ -399,7 +441,7 @@ filterVoidEdges();
                         //display progress
                         //Form1.Caption = "Load: " + CStr(iPrevLine) + " / " + CStr(fileLen): Form1.Refresh;
                         lastPercent = (int)(iPrevLine / 1023);
-// TODO                        System.out.printf("Load: (%3$d%%) %1$d / %2$d\n", iPrevLine, fileLen, lastPercent);
+// TODO                        System.out.printf("Load_MP (%4$d): (%3$d%%) %1$d / %2$d\n", iPrevLine, fileLen, lastPercent, LinkLen);
                     }
                     dataLineNum = 0;
                     //if (iPhase == 0) {
@@ -423,6 +465,13 @@ filterVoidEdges();
                         //add ending of section into saved header
                         MPheader = MPheader + sLine + "\r\n";
                     }
+
+                    // не совсем уверен, что это нужно сюда
+                    if (CONTROL_LOAD_NO_ROUTE) {
+                        waySpeed = CONTROL_FORCE_WAYSPEED;
+                        if (wayClass == -1) wayClass = Highway.HIGHWAY_SECONDARY;
+                    }                        
+                    
                     if (waySpeed != -1 && addedNodes.size() > 0 && addedEdges.size() > 0) {
                         linkLen = 0;                        
                         boolean fixLink = false;
@@ -521,15 +570,18 @@ autoINCNodesNum -= addedNodes.size();
                             k2 = sLine.indexOf("=") + 1;
                             //split by "," delimiter
                             routep = sLine.substring(k2).split(",");
-                            //direct copy of speed
-                            waySpeed = Byte.parseByte(routep[0]);
+                            if (CONTROL_FORCE_WAYSPEED == -1) {
+                                //direct copy of speed
+                                waySpeed = Byte.parseByte(routep[0]);
+                            } else {
+                                waySpeed = CONTROL_FORCE_WAYSPEED;
+                            }
                             //and oneway
                             wayOneway = Byte.parseByte(routep[2]);
                             if (lastCommentHighway == Highway.HIGHWAY_UNSPECIFIED) {
                                 //default class
                                 //wayClass = 3;
-                                wayClass = Highway.HIGHWAY_SECONDARY;
-                                //TODO: should be detected by Type and WayClass
+                                if (!CONTROL_LOAD_MP_TYPE) wayClass = Highway.HIGHWAY_SECONDARY;
                             }
                             else {
                                 //get class from osm2mp comment
@@ -549,7 +601,12 @@ autoINCNodesNum -= addedNodes.size();
                                 //ignore others
                                 label = "";
                             }
-
+                        }
+                        if (CONTROL_LOAD_MP_TYPE && sLine.startsWith("Type=")) {
+                            //type
+                            k2 = sLine.indexOf("=0x");
+                            k3 = Integer.parseInt(sLine.substring(k2 + 3), 16);
+                            wayClass = Highway.getTypeFromMP(k3);
                         }
                 //        break;
                 //    case  3:
@@ -604,7 +661,7 @@ autoINCNodesNum -= addedNodes.size();
                             dataLineNum = dataLineNum + 1;
 
                             thisLineNodes = 0;
-
+                            
 //*TODO:** label found: lNextPoint:;
                             k3 = 0;
                             while (true) {
@@ -627,7 +684,7 @@ autoINCNodesNum -= addedNodes.size();
                                 //Nodes[NodesNum].Edges = 0;
                                 Nodes[NodesNum].nodeID = -1;*/
                                 addedNode = new Node(-1);
-                                
+                                if (firstNodeOfWay == null) firstNodeOfWay = addedNode;
                                 addedNode.lat = fLat;
                                 addedNode.lon = fLon;
                                 //addedNode.nodeID = -1;
@@ -669,8 +726,17 @@ autoINCNodesNum -= addedNodes.size();
                                 //*TODO:** goto found: GoTo lNextPoint;
                             }
 //*TODO:** label found: lEndData:;
-
-                            p = 0;
+                            // терзают сомнения по поводу этого куска
+                            if (sectionType == 3 && firstNodeOfWay != null) {
+                                //polygone - need to close it
+                                //addedNode = new Node(firstNodeOfWay); // не уверен, что нужно копию, ведь нода одна и таже
+                                addedNode = firstNodeOfWay;
+                                if (thisLineNodes > 0) {
+                                    Edge jEdge = Edge.joinByEdge(addedNodes.get(addedNodes.size() - 2), addedNode);
+                                    addedEdges.add(jEdge);
+                                }
+                                firstNodeOfWay = null;
+                            }
 
 //*TODO:** label found: lNoData:;
                         }
@@ -718,6 +784,8 @@ autoINCNodesNum -= addedNodes.size();
         int[] iDmap;
         int[] nodeMap;
 
+        if (NodeIDMax == -1) return;
+        
         int NodesNum = Nodes.size();
 
         //if NodeID indexes are too big, we could not use direct mapping
@@ -755,7 +823,7 @@ autoINCNodesNum -= addedNodes.size();
                 if ((i & 8191) == 0) {  //8191
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    System.out.printf("Join soft %1$d / %2$d\r", i, Nodes.size());
+                    System.out.printf("JoinNodesByID soft %1$d / %2$d\r", i, Nodes.size());
                 }
 
             }
@@ -796,7 +864,7 @@ autoINCNodesNum -= addedNodes.size();
                 if ((i & 8191) == 0) {
                     //display progress
                     //Form1.Caption = "Join soft " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh;
-                    System.out.printf("Join hard %1$d / %2$d\r", i, NodesNum);
+                    System.out.printf("JoinNodesByID hard %1$d / %2$d\r", i, NodesNum);
                 }
             }
         }
@@ -886,7 +954,7 @@ autoINCNodesNum -= addedNodes.size();
             if ((i & 8191) == 0) {
                 //show progress
                 //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                System.out.printf("JD3: %1$d / %2$d\r", i, Edges.size());
+                System.out.printf("JoinDirections3: %1$d / %2$d\r", i, Edges.size());
             }
 
             //get bbox
@@ -992,7 +1060,7 @@ autoINCNodesNum -= addedNodes.size();
                 halfChain = Chain.size() / 2;
                 //will "kill" halfchain limit for very short loops
                 // TODO: возможно +1 не нужен
-                if (halfChain < 10) { halfChain = Chain.size(); }
+                if (halfChain < 10) { halfChain = Chain.size() + 1; }
 
                 //call metric length of found road
                 dist1 = 0;
@@ -1060,7 +1128,7 @@ autoINCNodesNum -= addedNodes.size();
                     //*TODO:** goto found: GoTo lSkip1;
                             continue;
                         }
-//                        System.out.println("indexOf: " + e + ", " + d);
+//        System.out.println("indexOf: " + e + ", " + d);
 
                         if (e < d) {
                             //normal forward edge (or pleat crossing 0 of chain)
@@ -1779,7 +1847,8 @@ autoINCNodesNum -= addedNodes.size();
 
     //Delete edges which connect node with itself
     public static void filterVoidEdges() {
-        int i = 0;
+        // оригинальный код
+/*        int i = 0;
         for (i = 0; i < Edges.size(); i++) {
             Edge edgeI = Edges.get(i);
             if ((edgeI.node1 != null) && (edgeI.node1 == edgeI.node2)) {
@@ -1787,6 +1856,7 @@ autoINCNodesNum -= addedNodes.size();
                 // TODO возможно стоит добавить удаление сомого edgeI
             }
         }
+*/
         /*int countNodes = 0;
         int countEdges = 0;
         for (i = Edges.size() - 1; i >=0 ; i--) {
@@ -1817,7 +1887,9 @@ autoINCNodesNum -= addedNodes.size();
         }
         System.out.printf("Clean N/E: %1$d / %2$d. Exist N/E: %3$d / %4$d\r\n", countNodes, countEdges, Nodes.size(), Edges.size());*/
         // перемещение пустых в конец
-        /*int countEdges = 0;
+
+        int countEdges = 0;
+        int i = 0;
         for (i = Edges.size() - 1; i >=0 ; i--) {
             Edge edgeI = Edges.get(i);
             Node delNode1 = edgeI.node1;
@@ -1837,10 +1909,14 @@ autoINCNodesNum -= addedNodes.size();
             if ((i & 8191) == 0) {
                 System.out.printf("Clean Edges: %1$d Left: %2$d   \r", countEdges, Edges.size());
             }
-        }*/
+        }
+        System.out.printf("Clean Edges: %1$d Left: %2$d   \r", countEdges, Edges.size());
+
+/*
         // самостоятельное перемещение
         int countEdges = 0;
         int curIndex = 0;
+        int i = 0;
         for (i = 0; i < Edges.size(); i++) {
             Edge edgeI = Edges.get(i);
             Node delNode1 = edgeI.node1;
@@ -1858,9 +1934,9 @@ autoINCNodesNum -= addedNodes.size();
 //                Edges.remove(Edges.size() - 1);
                 countEdges++;
             } else if (curIndex != i) {
-                Edges.set(curIndex++, Edges.get(i));
+                Edges.set(curIndex, Edges.get(i));
             }
-
+            curIndex++;
             if ((i & 8191) == 0) {
                 System.out.printf("Clean Edges: %1$d Left: %2$d   \r", countEdges, Edges.size());
             }
@@ -1869,6 +1945,7 @@ autoINCNodesNum -= addedNodes.size();
             Edges.remove(i);
         }
         System.out.printf("Clean Edges: %1$d Left: %2$d              \n", countEdges, Edges.size());
+*/
     }
 
     //Save geometry to .mp file with joining chains into polylines
@@ -1889,35 +1966,42 @@ autoINCNodesNum -= addedNodes.size();
             bw.write(MPheader);
             bw.newLine();
 
-            /*for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
+            for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
                 if (kEdgeN.node1 == null) {
                     //deleted edge
+                    System.out.println("Found deleted edge: " + kEdgeN.label);
                     //mark to ignore
                     kEdgeN.mark = 1;
                 } else {
                     //mark to save
                     kEdgeN.mark = 0;
                 }
-            }*/
-            numFormat = new DecimalFormat("0.#######");
+            }
+            numFormat = new DecimalFormat("0.000000##");
             DecimalFormatSymbols dfs = new DecimalFormatSymbols();
             dfs.setDecimalSeparator('.');
             numFormat.setDecimalFormatSymbols(dfs);
 
             int count = 0;
+            int maxChain = 0;
             for(Iterator<Edge> kEdge = Edges.iterator(); kEdge.hasNext();) {
                 Edge kEdgeN = kEdge.next();
-                if (kEdgeN.node1 != null) {
+                if (kEdgeN.mark == 0) {
                     //all marked to save - find chain and save
-                    bw.write(saveChain(kEdgeN));
+                    String ch = saveChain(kEdgeN);
+                    if (maxChain < ch.length()) maxChain = ch.length();
+                    bw.write(ch);
                 }
+                //bw.flush();
                 if (((count++) & 8191) == 0) {
                     //show progress
                     //Form1.Caption = "JD3: " + CStr(i) + " / " + CStr(EdgesNum): Form1.Refresh;
-                    System.out.printf("Save: %1$d / %2$d\r", count, Edges.size());
+                    System.out.printf("Save_MP_2: %1$d / %2$d MaxLen=%3$d\r", count, Edges.size(), maxChain);
                 }                
             }
+            
+            System.out.println();
 
             //file finalization flag
             bw.write("; Completed\r\n");
@@ -1932,8 +2016,8 @@ autoINCNodesNum -= addedNodes.size();
 
     //Save chain of edges into mp file (already opened as #2)
     public static String saveChain(Edge edge1) {
+        stringBuilder.setLength(0);
 
-        String result = "";
         int m;
         boolean chainEnd = false;
         Edge nextChainEdge = null;
@@ -1965,6 +2049,7 @@ autoINCNodesNum -= addedNodes.size();
             //addChain(j);
             Chain.add(nodeI);
             Chain.add(nodeJ);
+            startNode = nodeI;  //for detecting loops
             refEdge = new Edge(edge1);
             
             //saved
@@ -1973,7 +2058,7 @@ autoINCNodesNum -= addedNodes.size();
             if (nodeJ.edgeL.size() != 2) {
                 //that's all
                 chainEnd = true;
-                result += saveChainInString(refEdge);
+                saveChainInString(stringBuilder, refEdge);
         //*TODO:** goto found: GoTo lBreak;
             }
             else {
@@ -2071,7 +2156,7 @@ autoINCNodesNum -= addedNodes.size();
     //*TODO:** label found: lBreak:;
             //3) save chain to file
 
-            result += saveChainInString(refEdge);
+            saveChainInString(stringBuilder, refEdge);
 
             if (!chainEnd) {
                 //continue with this chain, as it is not ended
@@ -2096,6 +2181,7 @@ autoINCNodesNum -= addedNodes.size();
 
                 nextChainEdge.mark = 1;
 
+                if (nodeJ == startNode || nodeI == startNode) return "";   //loop detected - exit
                 //add both nodes of last edge
                 //ChainNum = 0;
                 //addChain(j);
@@ -2106,7 +2192,7 @@ autoINCNodesNum -= addedNodes.size();
                 if (nodeI.edgeL.size() != 2) {
                     //chain from one edge
                     chainEnd = true;
-                    result += saveChainInString(refEdge);
+                    saveChainInString(stringBuilder, refEdge);
                     continue; //break;  // без разницы флаг конца установлен
 
         //*TODO:** goto found: GoTo lBreak;
@@ -2120,7 +2206,7 @@ autoINCNodesNum -= addedNodes.size();
             }
         }
 
-        return result;
+        return stringBuilder.toString();
     }
 
     //Go by chain from node1 in some direction, but not to Node0
@@ -2142,51 +2228,52 @@ autoINCNodesNum -= addedNodes.size();
         return k;
     }
 
-    private static String saveChainInString(Edge refEdge) {
-        String result = "";
+    private static StringBuilder saveChainInString(StringBuilder sb, Edge refEdge) {
         //Print #2, "; roadtype=" + CStr(refedge.roadtype) 'debug info about road type
         //Print #2, "[POLYLINE]";
-        result += "[POLYLINE]\r\n";
+        sb.append("[POLYLINE]\r\n");
         //object type - from road type
         int typ = Highway.getType_by_Highway(refEdge.roadtype);
         //Print #2, "Type=0x"; Hex(typ);
-        result += String.format("Type=0x%1$X\r\n", typ);
+        //sb.append("Type=0x").append(intToHexStringBuilder(sb, typ)).append("\r\n");
+        sb.append("Type=0x");
+        intToHexStringBuilder(sb, typ).append("\r\n");
         if (refEdge.label.length() > 0) {
             //labels - into special codes fro labelization
             //Print #2, "Label=~[0x05]" + refEdge.label;
             //Print #2, "StreetDesc=~[0x05]" + refEdge.label;
-            result += "Label=~[0x05]" + refEdge.label + "\r\n";
-            result += "StreetDesc=~[0x05]" + refEdge.label + "\r\n";
+            sb.append("Label=~[0x05]").append(refEdge.label).append("\r\n");
+            sb.append("StreetDesc=~[0x05]").append(refEdge.label).append("\r\n");
         }
         //oneway indicator
         if (refEdge.oneway > 0) {
             //Print #2, "DirIndicator=1";
-            result += "DirIndicator=1\r\n";
+            sb.append("DirIndicator=1\r\n");
         }
         //top level of visibility - from road type
         //Print #2, "EndLevel=" + CStr(GetTopLevel_by_Highway(refEdge.roadtype));
         //Print #2, "RouteParam=";
-        result += "EndLevel=" + Highway.getTopLevel_by_Highway(refEdge.roadtype) + "\r\n";
-        result += "RouteParam=";
+        sb.append("EndLevel=").append(Highway.getTopLevel_by_Highway(refEdge.roadtype)).append("\r\n");
+        sb.append("RouteParam=");
         //speed class
         //Print #2, CStr(refEdge.speed); ",";
-        result += refEdge.speed + ",";
+        sb.append(refEdge.speed).append(",");
         //road class - from road type
         //Print #2, CStr(GetClass_by_Highway(refEdge.roadtype)); ",";
-        result += Highway.getClass_by_Highway(refEdge.roadtype) + ",";
+        sb.append(Highway.getClass_by_Highway(refEdge.roadtype)).append(",");
         if (refEdge.oneway > 0) {
             //one_way
             //Print #2, "1,";
-            result += "1,";
+            sb.append("1,");
         } else {
             //Print #2, "0,";
-            result += "0,";
+            sb.append("0,");
         }
         //other params are not handled
         //Print #2, "0,0,0,0,0,0,0,0,0";
-        result += "0,0,0,0,0,0,0,0,0\r\n";
+        sb.append("0,0,0,0,0,0,0,0,0\r\n");
         //Print #2, "Data0=";
-        result += "Data0=";
+        sb.append("Data0=");
         if (refEdge.oneway == 2) {
             //reverted oneway, save in backward sequence
             /*for (i = ChainNum - 1; i <= 0; i--) {
@@ -2195,15 +2282,19 @@ autoINCNodesNum -= addedNodes.size();
             }*/
             for(int i = Chain.size() - 1; i >= 0; i--) {
                 Node iChain = Chain.get(i);
-                if (i != Chain.size() - 1) { result += ","; }
-                result += "(" + numFormat.format(iChain.lat) + "," + numFormat.format(iChain.lon) +")";
+                if (i != Chain.size() - 1) { sb.append(","); }
+                sb.append("(").append(numFormat.format(iChain.lat)).append(",").append(numFormat.format(iChain.lon)).append(")");
             }
             //Print #2,;
-            result += "\r\n";
+            sb.append("\r\n");
             //Print #2, "Nod1=0,"; CStr(Chain(ChainNum - 1)); ",0";
             //Print #2, "Nod2=" + CStr(ChainNum - 1) + ","; CStr(Chain(0)); ",0";
-            result += String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(Chain.size()-1)));
-            result += String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(0)));
+            //sb.append(String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(Chain.size()-1))));
+            int indexChainLast = Nodes.indexOf(Chain.get(Chain.size()-1));
+            sb.append("Nod1=0,").append(indexChainLast).append(",0\r\n");
+            //sb.append(String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(0))));
+            int indexChainFirst = Nodes.indexOf(Chain.get(0));
+            sb.append("Nod2=").append(Chain.size()-1).append(",").append(indexChainFirst).append(",0\r\n");
         }
         else {
             //forward oneway or twoway, save in direct sequence
@@ -2218,20 +2309,50 @@ autoINCNodesNum -= addedNodes.size();
 
             for(int i = 0; i < Chain.size(); i++) {
                 Node iChain = Chain.get(i);
-                if (i != 0) { result += ","; }
+                if (i != 0) { sb.append(","); }
                 //result += String.format("(%.7f,%.7f)", iChain.lat, iChain.lon);
-                result += "(" + numFormat.format(iChain.lat) + "," + numFormat.format(iChain.lon) +")";
+                sb.append("(").append(numFormat.format(iChain.lat)).append(",").append(numFormat.format(iChain.lon)).append(")");
             }
-            result += "\r\n";
-            result += String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(0)));
-            result += String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(Chain.size()-1)));
+            sb.append("\r\n");
+            //sb.append(String.format("Nod1=0,%d,0\r\n", Nodes.indexOf(Chain.get(0))));
+            int indexChainFirst = indexOfNode(Chain.get(0)); //Nodes.indexOf(Chain.get(0));
+            int indexChainLast = indexOfNode(Chain.get(Chain.size()-1)); //Nodes.indexOf(Chain.get(Chain.size()-1));
+            sb.append("Nod1=0,").append(indexChainFirst).append(",0\r\n");
+            //sb.append(String.format("Nod2=%d,%d,0\r\n", Chain.size()-1, Nodes.indexOf(Chain.get(Chain.size()-1))));
+            sb.append("Nod2=").append(Chain.size()-1).append(",").append(indexChainLast).append(",0\r\n");
         }
         //Print #2, "[END]";
         //Print #2, "";
-        result += "[END]\r\n";
-        result += "\r\n";
+        sb.append("[END]\r\n");
+        sb.append("\r\n");
 
-        return result;
+        return sb;
+    }
+    
+    private static int indexOfNode(Node node) {
+        if (node.VBNum != -1 && Nodes.get(node.VBNum).equals(node)) return node.VBNum;
+        System.out.print("VBNum != index");
+        return Nodes.indexOf(node);
+    }
+    
+    //Helper Integer.toHexString by using StringBuilder
+    static char[] buf = new char[32];
+    final static char[] digits = {
+        '0' , '1' , '2' , '3' , '4' , '5' ,
+        '6' , '7' , '8' , '9' , 'a' , 'b' ,
+        'c' , 'd' , 'e' , 'f'
+    };
+    private static StringBuilder intToHexStringBuilder(StringBuilder sb, int i) {
+        final int shift = 4;
+        int charPos = 32;
+        int radix = 1 << shift;
+        int mask = radix - 1;
+        do {
+            buf[--charPos] = digits[i & mask];
+            i >>>= shift;
+        } while (i != 0);
+        sb.append(buf, charPos, (32 - charPos));
+        return sb;
     }
 
     //find and optimize all chains by Douglas-Peucker with Epsilon (in metres) and limiting max edge (in metres)
@@ -2250,7 +2371,7 @@ autoINCNodesNum -= addedNodes.size();
 //*TODO:** label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.printf("Doug-Pek sp %1$d / %2$d\r", nodeI.VBNum, Nodes.size());
+                System.out.printf("DouglasPeucker_total_split(%3$f) %1$d / %2$d\r", nodeI.VBNum, Nodes.size(), epsilon);
             }
         }
     }
@@ -2263,7 +2384,7 @@ autoINCNodesNum -= addedNodes.size();
         boolean chainEnd = false;
         Edge nextChainEdge = null;
         int m;
-
+        Node node0;
         //Algorithm works as DouglasPeucker_chain above
         //difference is only inside OptimizeByDouglasPeucker_One_split
 
@@ -2293,6 +2414,7 @@ autoINCNodesNum -= addedNodes.size();
 
         //2) go revert - from found end to another one and saving all nodes into Chain() array
 
+        node0 = nodeK;
         //ChainNum = 0;
         Chain.clear();  // = new ArrayList<Node>();
         //addChain(k);
@@ -2329,8 +2451,8 @@ autoINCNodesNum -= addedNodes.size();
             if (nextChainEdge != GoByChain_lastedge) {
                 Chain.add(nodeK);
 
-                if (nodeK != Chain.get(0) && nodeK.edgeL.size() == 2) {
-                    //still 2 edges - still chain
+                if (nodeK != Chain.get(0) && nodeK != node0 && nodeK.edgeL.size() == 2) {
+                    //still 2 edges - still chain, found first node from chain or node0 - chain loop, exit
                     nodeK.mark = 1;
                     nodeJ = nodeI;
                     nodeI = nodeK;
@@ -2369,8 +2491,8 @@ autoINCNodesNum -= addedNodes.size();
                 //   *================*--------------------*-----------*-----*---...
                 //                    j                    i
 
-                //chain from one edge - nothing to optimize by D-P
-                if (nodeI.edgeL.size() != 2) { return; }
+                //chain from one edge or loop found - nothing to optimize by D-P
+                if (nodeI.edgeL.size() != 2 || nodeJ == node0 || nodeI == node0) { return; }
 
                 //add both nodes of last edge
                 Chain.clear();  // = new ArrayList<Node>();
@@ -2809,7 +2931,7 @@ System.out.println();
                     nodeJ.delNode();
                 }
                 if ((nodeJ.VBNum & 8191) == 0) {
-                    System.out.printf("Collapse %1$d, Del %2$d / %3$d\r", passNumber, nodeJ.VBNum, Nodes.size());
+                    System.out.printf("Collapse %1$d, Del    %2$d / %3$d\r", passNumber, nodeJ.VBNum, Nodes.size());
                 }
             }
 
@@ -3356,7 +3478,7 @@ System.out.println();
 //label found: lSkip:;
             if ((nodeI.VBNum & 8191) == 0) {
                 //show progress
-                System.out.printf("Doug-Pek %1$d / %2$d\r", nodeI.VBNum, Nodes.size());
+                System.out.printf("DouglasPeucker_total(%3$f) %1$d / %2$d\r", nodeI.VBNum, Nodes.size(), epsilon);
             }
         }
     }
@@ -3365,6 +3487,7 @@ System.out.println();
     public static void douglasPeucker_chain(Node node1, double epsilon) {
         Edge refEdge;
         int chainEnd = 0;
+        Node node0;
 
         Edge nextChainEdge = null;
         chainEnd = 0;
@@ -3408,7 +3531,7 @@ System.out.println();
         //  k=j        i
 
         //2) go revert - from found end to another one and saving all nodes into Chain() array
-
+        node0 = nodeK;  // start node
         //ChainNum = 0;
         //addChain(k);
         //addChain(i);
@@ -3450,8 +3573,8 @@ System.out.println();
 
                 Chain.add(nodeK);
 
-                if (nodeK != Chain.get(0) && nodeK.edgeL.size() == 2) {
-                    //still 2 edges - still chain
+                if (nodeK != Chain.get(0) && nodeK != node0 && nodeK.edgeL.size() == 2) {
+                    //still 2 edges - still chain, found first node from chain or node0 - chain loop, exit
                     nodeK.mark = 1;
                     nodeJ = nodeI;
                     nodeI = nodeK;
@@ -3487,8 +3610,8 @@ System.out.println();
                 //   *================*--------------------*-----------*-----*---...
                 //                    j                    i
 
-                //chain from one edge - nothing to optimize by D-P
-                if (nodeI.edgeL.size() != 2) { return; }
+                //chain from one edge or loop found - nothing to optimize by D-P
+                if (nodeI.edgeL.size() != 2 || nodeJ == node0 ||nodeI == node0) { return; }
 
                 //add both nodes of last edge
                 Chain.clear();  // = new ArrayList<>();
@@ -3798,7 +3921,7 @@ System.out.println();
 
     // Collapse all edges shorter than CollapseDistance (also will kill void edges)
     // Will collapse edges one by one, so should be called somewhere in the end of optimization
-    public static void CollapseShortEdges(double collapseDistance) {
+    public static void collapseShortEdges(double collapseDistance) {
         int somedeleted, i;
         double edgeLen;
 
@@ -3820,10 +3943,115 @@ System.out.println();
                 }
                 if ((i++ & 8191) == 0) {
                     //show progress
-                    System.out.printf("CSE %1$d / %2$d\r", i, Edges.size());
+                    System.out.printf("CollapseShortEdges(%3$f) %1$d / %2$d\r", i, Edges.size(), collapseDistance);
                 }
             }
         }
         while(somedeleted > 0);
+    }
+    
+//##########################################################################################
+//
+//Block of code, used only by additional optimization functions
+//for Planet Overview and so on
+
+    //Generalize highways for Planet Overview
+    /*private static void optimizeRouting_hw(String inputFile) { //_hw
+        
+        if (inputFile.isEmpty()) return;
+        
+        String outFile = inputFile + "_opt.mp";     //output file
+        
+        //Init module (all arrays)
+        initArrays();
+        
+        Clusters.CONTROL_CLUSTER_SIZE = 0.05f;  //0.05 degrees for local maps, 1 for planet-s
+        CONTROL_FORCE_WAYSPEED = 4;             //set -1 to not force, 0 or more to forcing this value
+        Highway.CONTROL_TRUNKTYPE = 2;          //set 1 to be have same as motorway = 0x01 Major highway
+        Highway.CONTROL_PRIMARYTYPE = 3;        //set 2 to use 0x02 Principal highway
+        Highway.CONTROL_TRUNLINKKTYPE = 8;      //set 9 to have same as motorway
+        CONTROL_LOAD_NO_ROUTE = false;          //set 0 to skip no-routing polylines, 1 to load
+        CONTROL_LOAD_MP_TYPE = false;           //set 0 to skip mp Type= field, 1 to parse
+        
+        //Load data from file
+        load_MP(inputFile, 1200);
+        
+        //Join nodes by NodeID
+        joinNodesByID();
+        
+        //Join two way roads into bidirectional ways
+        joinDirections3(70, -0.996f, -0.95f, 100, 2);
+        //70 metres between directions (Ex: Universitetskii pr, Moscow - 68m)
+        //-0.996 -> (175, 180) degrees for start contradirectional check
+        //-0.95 -> (161.8, 180) degrees for further contradirectional checks
+        //100 metres min two way road
+        //2 metres for joining nodes into one        
+        
+        filterVoidEdges();
+        
+        //Optimize all roads by (Ramer–)Douglas–Peucker algorithm with limiting edge len
+        douglasPeucker_total_split(5, 100);
+        //Epsilon = 5 metres
+        //Max edge - 100 metres
+        
+        collapseJunctions2(3000, 7000, 0.13f);
+        //Slide allowed up to 3000 metres
+        //Max junction loop is 6000 metres
+        //0.13 -> ~ 7.46 degress
+        
+        filterVoidEdges();
+        
+        removeOneWay();
+        
+        combineDuplicateEdgesAll();
+        
+        //Optimize all roads by (Ramer–)Douglas–Peucker algorithm
+        douglasPeucker_total(5);
+        //Epsilon = 5 metres    
+        
+        //Join edges with very acute angle into one
+        joinAcute(100, 3);
+        //100 metres for joining nodes
+        //AcuteKoeff = 3 => 18.4 degrees     
+        
+        //Optimize all roads by (Ramer–)Douglas–Peucker algorithm
+        douglasPeucker_total(500);
+        //Epsilon = 500 metres        
+        
+        //Remove very short edges, they are errors, most probably
+        collapseShortEdges(300);
+        //CollapseDistance = 300 metres        
+    
+        //Combine close nodes and remove duplicate edges
+        joinCloseNodes(200);    //200 metres        
+        
+        CombineDuplicateEdgesAll();
+        
+        save_MP_2(outFile);
+    }
+    */
+    
+    //Combinde pair of edges, which connects same nodes
+    private static void combineDuplicateEdgesAll() {
+        for (Node node : Nodes) {
+            if (node.nodeID != Node.MARK_NODEID_DELETED) combineDuplicateEdges(node);
+            //System.out.printf("CombineDuplicateEdgesAll  " + CStr(i) + " / " + CStr(NodesNum): Form1.Refresh
+        }
+    }
+    
+    //Combinde pair of edges, which connects same nodes (including specified one)
+    private static void combineDuplicateEdges(Node node) {        
+        for (int i = 0; i < node.edgeL.size() - 1; i++) {
+            Edge edge = node.edgeL.get(i);
+            Node node2 = edge.node2;
+            if (node2 == node) node2 = edge.node1;
+            
+            for (int j = i + 1; j < node.edgeL.size(); j++) {
+                Edge edge2 = node.edgeL.get(j);
+                //other end nodes are the same - combine
+                if (edge2.node1 == node2 || edge2.node2 == node2) 
+                    Edge.combineEdges(edge, edge2, node);
+            }            
+        }        
     }
 }
